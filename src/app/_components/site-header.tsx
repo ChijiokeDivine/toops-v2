@@ -9,6 +9,7 @@ import { getPlatformTokenAddress } from '@/lib/wallet/platform-wallet'
 import { utcDayKey } from '@/lib/xp'
 
 import { Logo } from './logo'
+import { SiteBanner } from './site-banner'
 
 const NAV = [
   { label: 'Originals', href: '/originals' },
@@ -40,6 +41,7 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--t-border)] bg-[rgba(8,13,23,0.92)] backdrop-blur-md">
+      <SiteBanner />
       <div className="mx-auto flex h-[72px] max-w-[1600px] items-center px-3 lg:px-4">
         <Logo />
 
