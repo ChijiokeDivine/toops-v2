@@ -45,7 +45,7 @@ export function SiteBanner() {
             rel="noreferrer"
             className="transition-colors hover:text-white"
           >
-            Nov 14 demo ↗
+            Old demo ↗
           </a>
           <a
             href={HACKATHON.baselineCodeUrl}
@@ -53,7 +53,7 @@ export function SiteBanner() {
             rel="noreferrer"
             className="transition-colors hover:text-white"
           >
-            Nov 14 code ↗
+            Old GitHub ↗
           </a>
           <a
             href={HACKATHON.repoUrl}
