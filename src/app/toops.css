@@ -383,3 +383,31 @@ html {
     animation: none !important;
   }
 }
+
+/* ── Top banner ticker (mobile only) ─────────────────── */
+@keyframes t-banner-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 639px) {
+  .t-banner-ticker {
+    animation: t-banner-ticker 40s linear infinite;
+    will-change: transform;
+  }
+
+  .t-banner-ticker:hover,
+  .t-banner-ticker:focus-within {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-banner-ticker {
+    animation: none !important;
+  }
+}
