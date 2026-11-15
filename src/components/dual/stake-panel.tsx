@@ -71,7 +71,7 @@ export function StakePanel({
     <section className="overflow-hidden rounded-xl border border-white/[0.04] bg-[#0c1116]">
       <div className="grid lg:grid-cols-[330px_minmax(0,1fr)]">
         {/* ── Controls ─────────────────────────────────────────── */}
-        <div className="flex flex-col border-b border-[#1b2127] bg-[#0f151b] p-4 lg:min-h-[640px] lg:border-b-0 lg:border-r">
+        <div className="order-last flex flex-col border-t border-[#1b2127] bg-[#0f151b] p-4 lg:order-none lg:min-h-[640px] lg:border-t-0 lg:border-r">
           <div>
             <p className="text-[13px] font-medium text-[#8b97a5]">Stake</p>
             <div className="mt-2 flex h-11 items-stretch overflow-hidden rounded-xl bg-[#19212a]">

@@ -15,6 +15,7 @@ const NAV = [
   { label: 'Originals', href: '/originals' },
   { label: 'Multiplayer', href: '/multiplayer' },
   { label: 'Dual', href: '/originals/crash' },
+  { label: 'Mines', href: '/originals/mines' },
   { label: 'Rewards', href: '/rewards' },
   { label: 'Affiliates', href: '/affiliates' },
 ]

@@ -65,6 +65,10 @@ PARYON_API_URL=
 BCH_USD_PRICE=
 MIN_WITHDRAWAL_PUSD=1
 CRON_SECRET=
+# Optional in local dev, strongly recommended in production: ephemeral Mines
+# state + the realtime pub/sub bus. Without it, live matches only stay in sync
+# within a single function instance.
+REDIS_URL=
 ```
 
 ### Database
@@ -152,6 +156,28 @@ Relevant code:
 - `src/app/xp/page.tsx` — signed-in dashboard and signed-out prompt.
 - `src/components/xp/xp-claim-card.tsx` — claim button and live countdown.
 - `src/components/account/account-nav.tsx` — header XP, notifications, and profile menu.
+
+### Mines Duel
+
+Real-time 1v1 Mines at `/originals/mines`. Both players lock an equal PUSD stake (minimum `$2.00`), then alternate picks on one shared 50-tile board until someone reaches 2,500 points or the 37 safe tiles run out.
+
+- **Board:** 50 tiles, 13 bombs, 37 safe. The loser of a bomb hit loses 35% of banked points (rounded to the nearest 10) and their streak.
+- **Aegis Shield:** a 1-in-6 board roll hides one shield in a safe tile. It absorbs a single bomb without a penalty and preserves the streak; the bomb is still revealed.
+- **Scoring:** consecutive safe picks pay `100 / 150 / 250 / 400`, capped at 400. Turns alternate under a strict 10-second clock; a timeout auto-picks a random unrevealed tile.
+- **Win:** first to 2,500 is an instant knockout. If the board is exhausted, highest score wins, then fewer bombs hit, then faster average click time.
+- **Payout:** winner receives the pot minus a 1% platform fee, credited in the same Postgres transaction that records the ledger entry.
+- **Provably fair:** `HMAC-SHA256(serverSeed, clientSeed1 + clientSeed2 + nonce)` is expanded in counter mode: word 1 rolls the shield, the following words run a Fisher-Yates bomb shuffle. The server seed hash is published at match creation and the seed itself is revealed at settlement (`/api/mines/verify`).
+
+**Realtime on Vercel.** Serverless functions cannot accept WebSocket upgrades, so the match room runs over Server-Sent Events (`GET /api/mines/events`) with throttled `POST` calls for picks, presence, and the ~25 fps ghost cursor. The same event shape (`snapshot`, `cursor`, `notice`) is used throughout. A 10-second clock is enforced lazily by the state/pick routes and by a 1-second tick inside the SSE stream.
+
+**Ephemeral state.** Active boards live in Redis (`REDIS_URL`) behind a per-match distributed lock, with a process-global memory fallback for local development. The durable snapshot stays in `MinesMatch.state`, so a Redis eviction or a redeploy rehydrates the match instead of losing it. On Vercel, set `REDIS_URL` (Upstash and Redis Cloud both work) so two function instances see the same match.
+
+Relevant code:
+
+- `src/lib/mines/` — pure rules, fairness, runtime store, engine, and settlement.
+- `src/app/api/mines/` — state, queue, ready, pick, heartbeat, cursor, match, verify, events.
+- `src/components/mines/` — board, player strip, clock, bet panel, result overlay, fairness modal.
+- `src/app/originals/mines/` — page shell and flat dark board styling.
 
 ## Authentication
 

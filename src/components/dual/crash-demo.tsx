@@ -125,7 +125,7 @@ export function CrashDemo() {
   const shownX100 = crashed ? crashX100 : liveX100
 
   return (
-    <div className="flex min-h-[440px] flex-col bg-[#0c1116] lg:min-h-[640px]">
+    <div className="order-first flex min-h-[440px] flex-col bg-[#0c1116] lg:order-none lg:min-h-[640px]">
       {/* Status bar */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 bg-[#0f151b] px-4 py-4 sm:px-6">
         <div className="flex items-center gap-2">
@@ -160,11 +160,7 @@ export function CrashDemo() {
         >
           <defs>
             <linearGradient id="dual-demo-area" x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor={crashed ? '#f63c45' : '#00fa7f'}
-                stopOpacity="0.18"
-              />
+              <stop offset="0%" stopColor={crashed ? '#f63c45' : '#00fa7f'} stopOpacity="0.18" />
               <stop offset="100%" stopColor={crashed ? '#f63c45' : '#00fa7f'} stopOpacity="0" />
             </linearGradient>
           </defs>

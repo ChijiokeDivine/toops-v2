@@ -135,8 +135,7 @@ export function QueuePanel({ stakePusd, expiresAt, onCancel, busy }: QueuePanelP
 
           {/* Queue status, centered on the board */}
           <div className="relative z-10 flex flex-col items-center px-5 pb-6 text-center">
-            <span className="dual-spinner h-8 w-8 rounded-full border-2 border-[#00fa7f]/25 border-t-[#00fa7f]" />
-
+            
             <h2 className="mt-4 text-lg font-bold text-white sm:text-xl">Finding an opponent</h2>
             <p className="mt-1 max-w-[240px] text-[12px] leading-relaxed text-[var(--t-muted)]">
               You&apos;ll be paired with another player at the same stake.
