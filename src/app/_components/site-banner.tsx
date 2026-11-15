@@ -1,10 +1,17 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { HACKATHON } from '@/lib/hackathon'
 
+import { ExternalLinkIcon } from './icons'
+
 export function SiteBanner() {
+  const pathname = usePathname()
   const [copied, setCopied] = useState(false)
+
+  const address = HACKATHON.emberAddress
+  const shortAddress = `${address.slice(0, 14)}…${address.slice(-6)}`
 
   async function copyAddress() {
     try {
@@ -16,6 +23,8 @@ export function SiteBanner() {
     }
   }
 
+  if (pathname !== '/') return null
+
   return (
     <div className="border-b border-[var(--t-border)] bg-[var(--t-surface)]">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-4 gap-y-1 px-3 py-1.5 text-[11px] leading-5 text-[var(--t-muted)] lg:px-4">
@@ -25,8 +34,11 @@ export function SiteBanner() {
 
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="hidden shrink-0 sm:inline">EMBER2026 votes:</span>
-          <code className="min-w-0 break-all font-mono text-[11px] text-white/80">
-            {HACKATHON.emberAddress}
+          <code className="min-w-0 font-mono text-[11px] text-white/80">
+            <span title={address} className="sm:hidden">
+              {shortAddress}
+            </span>
+            <span className="hidden break-all sm:inline">{address}</span>
           </code>
           <button
             type="button"
@@ -43,25 +55,28 @@ export function SiteBanner() {
             href={HACKATHON.baselineDemoUrl}
             target="_blank"
             rel="noreferrer"
-            className="transition-colors hover:text-white"
+            className="inline-flex items-center gap-1 transition-colors hover:text-white"
           >
-            Old demo ↗
+            Old demo
+            <ExternalLinkIcon className="h-3 w-3" />
           </a>
           <a
             href={HACKATHON.baselineCodeUrl}
             target="_blank"
             rel="noreferrer"
-            className="transition-colors hover:text-white"
+            className="inline-flex items-center gap-1 transition-colors hover:text-white"
           >
-            Old GitHub ↗
+            Old GitHub
+            <ExternalLinkIcon className="h-3 w-3" />
           </a>
           <a
             href={HACKATHON.repoUrl}
             target="_blank"
             rel="noreferrer"
-            className="transition-colors hover:text-white"
+            className="inline-flex items-center gap-1 transition-colors hover:text-white"
           >
-            GitHub ↗
+            GitHub
+            <ExternalLinkIcon className="h-3 w-3" />
           </a>
         </span>
       </div>

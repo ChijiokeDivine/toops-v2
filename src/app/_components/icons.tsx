@@ -173,6 +173,25 @@ export function ImageIcon(props: IconProps) {
   )
 }
 
+export function ExternalLinkIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...a11y}
+      {...props}
+    >
+      <path d="M14 4.5h5.5V10" />
+      <path d="M19.5 4.5 11 13" />
+      <path d="M18 14v4.5a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2H10" />
+    </svg>
+  )
+}
+
 /* ── Social login ────────────────────────────────────── */
 
 export function GoogleIcon(props: IconProps) {
