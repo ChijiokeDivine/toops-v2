@@ -1,4 +1,4 @@
-import { formatPusdUnits } from '@/lib/pusd'
+import { formatPusdUnits, parsePusdInput } from '@/lib/pusd'
 import {
   MINES_CURSOR_TTL_MS,
   MINES_DISCONNECT_GRACE_MS,
@@ -87,7 +87,9 @@ export function buildMinesSnapshot(
   extras: SnapshotExtras,
 ): MinesMatchSnapshot {
   const finished = state.status === 'SETTLED' || state.status === 'CANCELLED'
-  const pot = BigInt(state.potPusd)
+  // Runtime amounts are stored as formatted decimals (e.g. "4.00"), so they
+  // must be parsed back into base units rather than passed straight to BigInt.
+  const pot = parsePusdInput(state.potPusd) ?? 0n
   const projected = projectedMinesPayout(pot)
 
   return {
