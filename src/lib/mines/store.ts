@@ -2,6 +2,7 @@ import 'server-only'
 
 import { randomUUID } from 'node:crypto'
 import Redis from 'ioredis'
+import { MINES_BOARD_SIZE } from './config'
 import type { MinesCursor, MinesCursorMap, MinesRuntime, MinesSeat } from './types'
 
 /**
@@ -157,7 +158,7 @@ function toHash(state: MinesRuntime): Record<string, string> {
 
 function fromHash(hash: Record<string, string>): MinesRuntime | null {
   if (!hash.matchId) return null
-  const board = (hash.board ?? '').slice(0, 50)
+  const board = (hash.board ?? '').slice(0, MINES_BOARD_SIZE)
   const players = decodeJson<MinesRuntime['players'] | null>(hash.players, null)
   if (!players || players.length !== 2) return null
 
@@ -171,7 +172,9 @@ function fromHash(hash: Record<string, string>): MinesRuntime | null {
     hmacHex: hash.hmacHex ?? '',
     nonce: decodeNumber(hash.nonce, 0),
     serverSeed: hash.serverSeed ?? '',
-    board: Array.from(board.padEnd(50, 'S'), (char) => (char === 'B' ? 'BOMB' : 'SAFE')),
+    board: Array.from(board.padEnd(MINES_BOARD_SIZE, 'S'), (char) =>
+      char === 'B' ? 'BOMB' : 'SAFE',
+    ),
     shieldIndex: decodeNullableNumber(hash.shieldIndex),
     players,
     revealed: decodeJson<number[]>(hash.revealed, []),

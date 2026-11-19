@@ -18,7 +18,7 @@ describe('mines provably-fair board', () => {
     const first = deriveMinesBoard(serverSeed, clientSeeds, 0)
     const second = deriveMinesBoard(serverSeed, clientSeeds, 0)
     expect(first).toEqual(second)
-    expect(encodeBoard(first.tiles)).toHaveLength(50)
+    expect(encodeBoard(first.tiles)).toHaveLength(MINES_BOARD_SIZE)
   })
 
   it('matches the published HMAC recipe and a known board vector', () => {
@@ -28,16 +28,16 @@ describe('mines provably-fair board', () => {
     expect(board.hmacHex).toBe('0523be6b88a8047ea10854b8c5c23edd54fca7a5ff6e5d8a6cde47e23f9b44d2')
     expect(board.shieldTriggered).toBe(false)
     expect(board.shieldIndex).toBeNull()
-    expect(encodeBoard(board.tiles)).toBe('SSBSSSSSSSSSSBSSBBSSSSSSBBSSSSSBSBSSBSSBBSSBSSSSBS')
+    expect(encodeBoard(board.tiles)).toBe('SSSSSSSSBBSSSBSBBBSBSSSBSSSSSSSSBSS')
   })
 
   it('matches a known shield vector', () => {
     const board = deriveMinesBoard(serverSeed, clientSeeds, 3)
     expect(board.shieldRoll).toBe(0)
     expect(board.shieldTriggered).toBe(true)
-    expect(board.shieldIndex).toBe(6)
-    expect(board.tiles[6]).toBe('SAFE')
-    expect(encodeBoard(board.tiles)).toBe('SSSBSSSSBBSBSSBSSSBSSSSSBSSSSSSSBBSSSSBSBSSSSSSBBS')
+    expect(board.shieldIndex).toBe(31)
+    expect(board.tiles[31]).toBe('SAFE')
+    expect(encodeBoard(board.tiles)).toBe('SSSSSSSSSSSSBBSBSBSBSSSSSSSSBBSSBBS')
   })
 
   it('changes when the nonce changes', () => {
@@ -52,7 +52,7 @@ describe('mines provably-fair board', () => {
     expect(encodeBoard(forward.tiles)).not.toBe(encodeBoard(reversed.tiles))
   })
 
-  it('always places exactly 13 bombs and 37 safe tiles', () => {
+  it(`always places exactly ${MINES_BOMB_COUNT} bombs and ${MINES_SAFE_COUNT} safe tiles`, () => {
     for (let nonce = 0; nonce < 40; nonce += 1) {
       const board = deriveMinesBoard(serverSeed, clientSeeds, nonce)
       const bombs = board.tiles.filter((tile) => tile === 'BOMB').length

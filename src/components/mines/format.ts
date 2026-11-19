@@ -1,3 +1,4 @@
+import { MINES_KNOCKOUT_SCORE } from '@/lib/mines/config'
 import type { MinesWinReason } from '@/lib/mines/types'
 
 export function usd(amount: string): string {
@@ -17,7 +18,7 @@ export function shortHash(hash: string, head = 8, tail = 6): string {
 export function reasonLabel(reason: MinesWinReason | null): string {
   switch (reason) {
     case 'KNOCKOUT':
-      return 'First to 2,500 points'
+      return `First to ${points(MINES_KNOCKOUT_SCORE)} points`
     case 'EXHAUSTION':
       return 'Board cleared — highest score'
     case 'TIEBREAK_BOMBS':

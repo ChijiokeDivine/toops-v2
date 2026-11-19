@@ -1,10 +1,9 @@
 'use client'
 
-import { MINES_BOMB_COUNT, MINES_SAFE_COUNT } from '@/lib/mines/config'
 import type { MinesMatchSnapshot, MinesQueueView, MinesViewer } from '@/lib/mines/types'
 import { formatPusdUnits, parsePusdInput } from '@/lib/pusd'
-import { shortHash, usd } from './format'
-import { ShieldOutlineIcon, SpinnerIcon, WalletIcon } from './icons'
+import { usd } from './format'
+import { SpinnerIcon, WalletIcon } from './icons'
 
 type Notice = { tone: 'info' | 'error' | 'success'; text: string } | null
 
@@ -17,13 +16,10 @@ type SidePanelProps = {
   queue: MinesQueueView | null
   busy: string | null
   notice: Notice
-  connected: boolean
-  clientSeed: string | null
   onJoin: () => void
   onCancelQueue: () => void
   onDismiss: () => void
   onPlayAgain: () => void
-  onOpenFairness: () => void
   onSignIn: () => void
   now: number
 }
@@ -45,13 +41,10 @@ export function SidePanel(props: SidePanelProps) {
     queue,
     busy,
     notice,
-    connected,
-    clientSeed,
     onJoin,
     onCancelQueue,
     onDismiss,
     onPlayAgain,
-    onOpenFairness,
     onSignIn,
     now,
   } = props
@@ -72,8 +65,6 @@ export function SidePanel(props: SidePanelProps) {
 
   const queueSeconds =
     queue == null ? 0 : Math.max(0, Math.ceil((new Date(queue.expiresAt).getTime() - now) / 1_000))
-
-  const seedLabel = match?.serverSeedHash ?? clientSeed ?? ''
 
   return (
     <aside className="mn-panel" aria-label="Mines controls">
@@ -124,27 +115,7 @@ export function SidePanel(props: SidePanelProps) {
               </button>
             </div>
           </div>
-          <p className="mn-field-hint">Minimum stake $2.00 · winner takes the $4.00+ pot</p>
-        </div>
-
-        <div className="mn-field">
-          <div className="mn-field-head">
-            <span id="mn-mines-label">Number of Mines</span>
-            <span className="mn-field-value">{MINES_BOMB_COUNT}</span>
-          </div>
-          <div className="mn-mines-row" aria-labelledby="mn-mines-label">
-            <div className="mn-slider" aria-hidden="true">
-              <span className="mn-slider-fill" style={{ width: '26%' }} />
-              <span className="mn-slider-knob" style={{ left: '26%' }} />
-            </div>
-            <div className="mn-stepper" aria-hidden="true">
-              <span>−</span>
-              <span>+</span>
-            </div>
-          </div>
-          <p className="mn-field-hint">
-            {MINES_SAFE_COUNT} safe tiles · one Aegis Shield on 1-in-6 boards
-          </p>
+          <p className="mn-field-hint">Minimum stake $2.00 </p>
         </div>
 
         <div className="mn-action">
@@ -180,12 +151,6 @@ export function SidePanel(props: SidePanelProps) {
                 <span className="mn-live-dot" />
                 <span>Match live</span>
                 <span className="mn-live-pot">{usd(match.potPusd)} pot</span>
-              </div>
-              <div className="mn-live-row is-muted">
-                <span>
-                  {match.status === 'WAITING' ? 'Waiting for both players' : '10s per turn'}
-                </span>
-                <span>First to 2,500</span>
               </div>
               <button type="button" className="mn-cta" disabled>
                 {match.status === 'WAITING' ? 'Starting…' : 'Match in progress'}
@@ -227,31 +192,6 @@ export function SidePanel(props: SidePanelProps) {
               {notice.text}
             </p>
           ) : null}
-        </div>
-
-        <ul className="mn-facts">
-          <li>
-            <span className="mn-fact-value">{MINES_BOMB_COUNT}</span> bombs ·{' '}
-            <span className="mn-fact-value">{MINES_SAFE_COUNT}</span> safe
-          </li>
-          <li>10-second shot clock, auto-pick on timeout</li>
-          <li>Shield absorbs one bomb without losing points</li>
-        </ul>
-      </div>
-
-      <div className="mn-panel-footer">
-        <button type="button" className="mn-fair-button" onClick={onOpenFairness}>
-          <ShieldOutlineIcon className="mn-fair-icon" />
-          <span>Provably Fair</span>
-          <span className="mn-fair-hash">{shortHash(seedLabel, 6, 4)}</span>
-        </button>
-        <div className="mn-panel-status">
-          <span className={`mn-status-dot${connected ? ' is-live' : ''}`} />
-          {match?.status === 'LIVE'
-            ? connected
-              ? 'Realtime connected'
-              : 'Polling fallback'
-            : 'SSE + Redis'}
         </div>
       </div>
     </aside>

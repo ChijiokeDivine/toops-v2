@@ -21,7 +21,7 @@ export function hashServerSeed(serverSeed: string): string {
  *
  * The published fairness recipe is:
  *   block 0 = HMAC-SHA256(serverSeed, clientSeed1 + clientSeed2 + nonce)
- * A 32-byte digest is not enough to shuffle 50 tiles, so the stream is expanded
+ * A 32-byte digest is not enough to shuffle 35 tiles, so the stream is expanded
  * in counter mode with the same key and message:
  *   block i = HMAC-SHA256(serverSeed, clientSeed1 + clientSeed2 + nonce + ':' + i)
  * Block 0 is the digest shown in the UI.
@@ -44,7 +44,7 @@ class HmacWordStream {
   private digest(block: number): Buffer {
     // Block 0 is the published recipe: HMAC-SHA256(serverSeed, clientSeed1 +
     // clientSeed2 + nonce). Later blocks append a counter so 32 bytes are not
-    // the only entropy available for a 50-tile shuffle.
+    // the only entropy available for a 35-tile shuffle.
     const message = block === 0 ? this.message : `${this.message}:${block}`
     return createHmac('sha256', this.key).update(message).digest()
   }
@@ -79,7 +79,7 @@ class HmacWordStream {
 }
 
 export type MinesBoardResult = {
-  /** 50 tile kinds; `BOMB` for the 13 mines, `SAFE` for the rest. */
+  /** 35 tile kinds; `BOMB` for the 9 mines, `SAFE` for the rest. */
   tiles: MinesTileKind[]
   /** Index of the Aegis Shield inside the safe tiles, or null on a 5/6 board. */
   shieldIndex: number | null
@@ -96,8 +96,8 @@ export type MinesBoardResult = {
  *
  * Order of consumption from the HMAC stream:
  *   1. one word decides the 1-in-6 shield roll (`word % 6 === 0`);
- *   2. a partial Fisher-Yates shuffle chooses 13 bomb tiles;
- *   3. when the shield triggered, one word chooses its tile among the 37 safe.
+ *   2. a partial Fisher-Yates shuffle chooses 9 bomb tiles;
+ *   3. when the shield triggered, one word chooses its tile among the 26 safe.
  */
 export function deriveMinesBoard(
   serverSeed: string,
@@ -136,7 +136,7 @@ export function deriveMinesBoard(
   }
 }
 
-/** 50-char durable encoding: `B` for bomb, `S` for safe. */
+/** 35-char durable encoding: `B` for bomb, `S` for safe. */
 export function encodeBoard(tiles: readonly MinesTileKind[]): string {
   return tiles.map((tile) => (tile === 'BOMB' ? 'B' : 'S')).join('')
 }

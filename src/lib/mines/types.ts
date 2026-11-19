@@ -49,7 +49,7 @@ export type MinesRuntime = {
   nonce: number
   /** Never leaves the server until the match is finished. */
   serverSeed: string
-  /** 50 entries. `B` = bomb, `S` = safe. Never sent while unrevealed. */
+  /** 35 entries. `B` = bomb, `S` = safe. Never sent while unrevealed. */
   board: MinesTileKind[]
   /** Index of the Aegis Shield inside the safe tiles, or null when not rolled. */
   shieldIndex: number | null

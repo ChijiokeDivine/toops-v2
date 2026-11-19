@@ -159,12 +159,12 @@ Relevant code:
 
 ### Mines Duel
 
-Real-time 1v1 Mines at `/originals/mines`. Both players lock an equal PUSD stake (minimum `$2.00`), then alternate picks on one shared 50-tile board until someone reaches 2,500 points or the 37 safe tiles run out.
+Real-time 1v1 Mines at `/originals/mines`. Both players lock an equal PUSD stake (minimum `$2.00`), then alternate picks on one shared 35-tile board until someone reaches 1,750 points or the 26 safe tiles run out.
 
-- **Board:** 50 tiles, 13 bombs, 37 safe. The loser of a bomb hit loses 35% of banked points (rounded to the nearest 10) and their streak.
+- **Board:** 35 tiles, 9 bombs, 26 safe. The loser of a bomb hit loses 35% of banked points (rounded to the nearest 10) and their streak.
 - **Aegis Shield:** a 1-in-6 board roll hides one shield in a safe tile. It absorbs a single bomb without a penalty and preserves the streak; the bomb is still revealed.
-- **Scoring:** consecutive safe picks pay `100 / 150 / 250 / 400`, capped at 400. Turns alternate under a strict 10-second clock; a timeout auto-picks a random unrevealed tile.
-- **Win:** first to 2,500 is an instant knockout. If the board is exhausted, highest score wins, then fewer bombs hit, then faster average click time.
+- **Scoring:** consecutive safe picks pay `70 / 105 / 175 / 280`, capped at 280. Turns alternate under a strict 10-second clock; a timeout auto-picks a random unrevealed tile.
+- **Win:** first to 1,750 is an instant knockout. If the board is exhausted, highest score wins, then fewer bombs hit, then faster average click time.
 - **Payout:** winner receives the pot minus a 1% platform fee, credited in the same Postgres transaction that records the ledger entry.
 - **Provably fair:** `HMAC-SHA256(serverSeed, clientSeed1 + clientSeed2 + nonce)` is expanded in counter mode: word 1 rolls the shield, the following words run a Fisher-Yates bomb shuffle. The server seed hash is published at match creation and the seed itself is revealed at settlement (`/api/mines/verify`).
 

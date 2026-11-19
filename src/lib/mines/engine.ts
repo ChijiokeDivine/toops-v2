@@ -7,6 +7,8 @@ import { formatPusdUnits } from '@/lib/pusd'
 import { publishMinesEvent } from './bus'
 import {
   MINES_ABANDON_MS,
+  MINES_BOARD_SIZE,
+  MINES_BOMB_COUNT,
   MINES_MAX_STAKE_PUSD,
   MINES_MIN_STAKE_PUSD,
   MINES_QUEUE_TTL_MS,
@@ -118,7 +120,7 @@ function parseState(value: Prisma.JsonValue | null): MinesRuntime | null {
   const state = value as unknown as MinesRuntime
   if (typeof state.matchId !== 'string') return null
   if (!Array.isArray(state.players) || state.players.length !== 2) return null
-  if (!Array.isArray(state.board) || state.board.length !== 50) return null
+  if (!Array.isArray(state.board) || state.board.length !== MINES_BOARD_SIZE) return null
   return state
 }
 
@@ -675,7 +677,10 @@ export async function setMinesCursor(
   if (!Number.isFinite(x) || !Number.isFinite(y)) return
 
   const tile =
-    input.tile != null && Number.isInteger(input.tile) && input.tile >= 0 && input.tile < 50
+    input.tile != null &&
+    Number.isInteger(input.tile) &&
+    input.tile >= 0 &&
+    input.tile < MINES_BOARD_SIZE
       ? input.tile
       : null
 
@@ -1059,7 +1064,7 @@ export async function verifyMinesMatch(matchId: string): Promise<MinesVerifyResp
     shieldMatches: check.shieldMatches,
     revealed: reveal,
     note: reveal
-      ? 'HMAC-SHA256(serverSeed, clientSeed1 + clientSeed2 + nonce) expands in counter mode. Word 1 rolls the 1-in-6 shield; the next words shuffle the 13 bombs.'
+      ? `HMAC-SHA256(serverSeed, clientSeed1 + clientSeed2 + nonce) expands in counter mode. Word 1 rolls the 1-in-6 shield; the next words shuffle the ${MINES_BOMB_COUNT} bombs.`
       : 'The server seed and the full board are revealed when the match ends.',
   }
 }

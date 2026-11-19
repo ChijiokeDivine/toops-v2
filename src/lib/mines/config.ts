@@ -5,8 +5,8 @@
  * Scores are whole points; the 35% bomb penalty is rounded to the nearest 10.
  */
 
-export const MINES_BOARD_SIZE = 50
-export const MINES_BOMB_COUNT = 13
+export const MINES_BOARD_SIZE = 35
+export const MINES_BOMB_COUNT = 9
 export const MINES_SAFE_COUNT = MINES_BOARD_SIZE - MINES_BOMB_COUNT
 
 /** One in six boards hides an Aegis Shield inside a safe tile. */
@@ -16,13 +16,14 @@ export const MINES_SHIELD_ODDS = 1 / 6
 export const MINES_TURN_MS = 10_000
 
 /** First player to this score is knocked out of the match immediately. */
-export const MINES_KNOCKOUT_SCORE = 2_500
+export const MINES_KNOCKOUT_SCORE = 1_750
 
 /**
  * Points awarded for the n-th consecutive safe pick. The fourth and every
- * later pick in the same streak pay the cap.
+ * later pick in the same streak pay the cap. Scaled with the smaller board
+ * (70% of the old 100 / 150 / 250 / 400 ladder).
  */
-export const MINES_STREAK_POINTS = [100, 150, 250, 400] as const
+export const MINES_STREAK_POINTS = [70, 105, 175, 280] as const
 
 /** A bomb without a shield costs 35% of banked points, rounded to nearest 10. */
 export const MINES_BOMB_PENALTY_BPS = 3_500

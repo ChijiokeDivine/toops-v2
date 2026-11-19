@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { MINES_CURSOR_PULSE_MS, MINES_CURSOR_TTL_MS } from '@/lib/mines/config'
+import { MINES_BOARD_SIZE, MINES_CURSOR_PULSE_MS, MINES_CURSOR_TTL_MS } from '@/lib/mines/config'
 import type { MinesCursor, MinesPickResult, MinesTileView } from '@/lib/mines/types'
 import { BombIcon, GemIcon, ShieldIcon, TileGlyph } from './icons'
 
@@ -111,7 +111,7 @@ export function MinesBoard({
         onPointerLeave={onCursorLeave}
         onPointerDown={handlePointerMove}
         role="grid"
-        aria-label="Mines board, 50 tiles"
+        aria-label={`Mines board, ${MINES_BOARD_SIZE} tiles`}
       >
         {tiles.map((state, index) => {
           const flashing = flash?.tile === index

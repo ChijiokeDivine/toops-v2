@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MINES_SAFE_COUNT, MINES_TURN_MS } from './config'
+import { MINES_BOARD_SIZE, MINES_SAFE_COUNT, MINES_TURN_MS } from './config'
 import {
   applyPick,
   averageClickMs,
@@ -31,7 +31,7 @@ function player(userId: string): MinesPlayerRuntime {
 }
 
 function createState(overrides: Partial<MinesRuntime> = {}): MinesRuntime {
-  const board: MinesRuntime['board'] = Array.from({ length: 50 }, () => 'SAFE')
+  const board: MinesRuntime['board'] = Array.from({ length: MINES_BOARD_SIZE }, () => 'SAFE')
   board[0] = 'BOMB'
   board[10] = 'BOMB'
   board[20] = 'BOMB'
@@ -68,21 +68,21 @@ function createState(overrides: Partial<MinesRuntime> = {}): MinesRuntime {
 
 /** Picks `count` safe tiles, skipping `exclude`, for exhaustion scenarios. */
 function safeReveals(state: MinesRuntime, count: number, exclude: number): number[] {
-  return Array.from({ length: 50 }, (_, index) => index)
+  return Array.from({ length: MINES_BOARD_SIZE }, (_, index) => index)
     .filter((index) => state.board[index] === 'SAFE' && index !== exclude)
     .slice(0, count)
 }
 
 describe('mines scoring', () => {
-  it('pays 100 / 150 / 250 / 400 and caps the streak per player', () => {
+  it('pays 70 / 105 / 175 / 280 and caps the streak per player', () => {
     const state = createState()
     const payouts: number[] = []
     for (let index = 1; index <= 8; index += 1) {
       const result = applyPick(state, state.turn, index, START + index * 1_000)
       payouts.push(result.points)
     }
-    expect(payouts).toEqual([100, 100, 150, 150, 250, 250, 400, 400])
-    expect(state.players[0].score + state.players[1].score).toBe(1_800)
+    expect(payouts).toEqual([70, 70, 105, 105, 175, 175, 280, 280])
+    expect(state.players[0].score + state.players[1].score).toBe(1_260)
   })
 
   it('rounds the 35% bomb penalty to the nearest 10', () => {
@@ -132,7 +132,7 @@ describe('mines scoring', () => {
     const result = applyPick(state, 0, 5, START + 400)
     expect(result.shieldGained).toBe(true)
     expect(state.players[0].shields).toBe(1)
-    expect(result.points).toBe(100)
+    expect(result.points).toBe(70)
   })
 
   it('records click speed and alternates turns', () => {
@@ -154,11 +154,11 @@ describe('mines scoring', () => {
 })
 
 describe('mines win conditions', () => {
-  it('ends instantly at 2,500 points', () => {
+  it('ends instantly at 1,750 points', () => {
     const state = createState()
-    state.players[0].score = 2_400
+    state.players[0].score = 1_680
     applyPick(state, 0, 1, START + 500)
-    expect(state.players[0].score).toBe(2_500)
+    expect(state.players[0].score).toBe(1_750)
     expect(state.winnerSeat).toBe(0)
     expect(state.winReason).toBe('KNOCKOUT')
     expect(state.turnDeadline).toBe(0)
@@ -166,11 +166,11 @@ describe('mines win conditions', () => {
 
   it('awards exhaustion to the highest score', () => {
     const state = createState()
-    state.revealed = safeReveals(state, MINES_SAFE_COUNT - 1, 49)
+    state.revealed = safeReveals(state, MINES_SAFE_COUNT - 1, MINES_BOARD_SIZE - 1)
     state.players[0].score = 900
     state.players[1].score = 400
 
-    applyPick(state, 0, 50 - 1, START + 1_000)
+    applyPick(state, 0, MINES_BOARD_SIZE - 1, START + 1_000)
 
     expect(revealedSafeCount(state)).toBe(MINES_SAFE_COUNT)
     expect(state.winnerSeat).toBe(0)
@@ -179,24 +179,24 @@ describe('mines win conditions', () => {
 
   it('breaks a score tie with fewer bombs hit', () => {
     const state = createState()
-    state.revealed = safeReveals(state, MINES_SAFE_COUNT - 1, 49)
+    state.revealed = safeReveals(state, MINES_SAFE_COUNT - 1, MINES_BOARD_SIZE - 1)
     state.players[0].score = 700
-    state.players[1].score = 800
+    state.players[1].score = 770
     state.players[0].bombs = 1
     state.players[1].bombs = 0
 
-    applyPick(state, 0, 50 - 1, START + 1_000)
+    applyPick(state, 0, MINES_BOARD_SIZE - 1, START + 1_000)
 
-    expect(state.players[0].score).toBe(800)
+    expect(state.players[0].score).toBe(770)
     expect(state.winnerSeat).toBe(1)
     expect(state.winReason).toBe('TIEBREAK_BOMBS')
   })
 
   it('breaks a bombs tie with the faster average click speed', () => {
     const state = createState()
-    state.revealed = safeReveals(state, MINES_SAFE_COUNT - 1, 49)
+    state.revealed = safeReveals(state, MINES_SAFE_COUNT - 1, MINES_BOARD_SIZE - 1)
     state.players[0].score = 700
-    state.players[1].score = 800
+    state.players[1].score = 770
     state.players[0].bombs = 0
     state.players[1].bombs = 0
     state.players[0].clicks = 2
@@ -204,9 +204,9 @@ describe('mines win conditions', () => {
     state.players[1].clicks = 2
     state.players[1].totalClickMs = 2_000
 
-    applyPick(state, 0, 50 - 1, START + 1_000)
+    applyPick(state, 0, MINES_BOARD_SIZE - 1, START + 1_000)
 
-    expect(state.players[0].score).toBe(800)
+    expect(state.players[0].score).toBe(770)
     expect(state.winnerSeat).toBe(1)
     expect(state.winReason).toBe('TIEBREAK_SPEED')
   })
@@ -215,15 +215,15 @@ describe('mines win conditions', () => {
     const state = createState()
     state.revealed = [0, 1, 2, 3]
     const available = new Set(pickableTiles(state))
-    for (let index = 0; index < 50; index += 1) {
-      const tile = chooseAutoTile(state, () => index / 50)
+    for (let index = 0; index < MINES_BOARD_SIZE; index += 1) {
+      const tile = chooseAutoTile(state, () => index / MINES_BOARD_SIZE)
       expect(tile).not.toBeNull()
       expect(available.has(tile!)).toBe(true)
       expect([0, 1, 2, 3]).not.toContain(tile)
     }
   })
 
-  it('decides nothing while safe tiles remain and nobody reached 2,500', () => {
+  it('decides nothing while safe tiles remain and nobody reached the knockout score', () => {
     const state = createState()
     expect(decideWinner(state, 0)).toBeNull()
   })

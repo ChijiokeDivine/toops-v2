@@ -3,12 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { openAuth } from '@/components/auth/auth-events'
 import {
-  MINES_BOMB_COUNT,
+  MINES_BOARD_SIZE,
   MINES_DEFAULT_STAKE_PUSD,
   MINES_HEARTBEAT_MS,
   MINES_POLL_IDLE_MS,
   MINES_POLL_LIVE_MS,
-  MINES_SAFE_COUNT,
 } from '@/lib/mines/config'
 import type {
   MinesCursor,
@@ -29,10 +28,7 @@ import { useMinesRealtime } from './use-mines-realtime'
 
 type Notice = { tone: 'info' | 'error' | 'success'; text: string } | null
 
-const HIDDEN_TILES: MinesTileView[] = Array.from(
-  { length: MINES_BOMB_COUNT + MINES_SAFE_COUNT },
-  () => 'HIDDEN',
-)
+const HIDDEN_TILES: MinesTileView[] = Array.from({ length: MINES_BOARD_SIZE }, () => 'HIDDEN')
 
 export function MinesGame() {
   const [state, setState] = useState<MinesStateResponse | null>(null)
@@ -410,8 +406,8 @@ export function MinesGame() {
   return (
     <div className="mn-shell">
       <section className="mn-stage" aria-label="Mines game">
-        <div className="mn-stage-head">
-          {match && opponent && self ? (
+        {match && opponent && self ? (
+          <div className="mn-stage-head">
             <div className="mn-players">
               <PlayerCard
                 player={opponent}
@@ -433,15 +429,8 @@ export function MinesGame() {
                 live={matchStatus === 'LIVE'}
               />
             </div>
-          ) : (
-            <div className="mn-idle-head">
-              <span className="mn-idle-title">Mines Duel</span>
-              <span className="mn-idle-sub">
-                Real-time 1v1 · {MINES_BOMB_COUNT} bombs · {MINES_SAFE_COUNT} safe · first to 2,500
-              </span>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : null}
 
         <div className="mn-board-area">
           <MinesBoard
@@ -472,10 +461,6 @@ export function MinesGame() {
             Pot <strong>{usd(pot)}</strong>
           </span>
           <span className="mn-meta-sep" aria-hidden="true" />
-          <span>
-            {MINES_BOMB_COUNT} bombs · {MINES_SAFE_COUNT} safe
-          </span>
-          <span className="mn-meta-sep" aria-hidden="true" />
           <span
             className="mn-meta-hash"
             title={match?.serverSeedHash ?? 'Server seed hash appears when a match starts'}
@@ -489,9 +474,6 @@ export function MinesGame() {
               {connected ? 'Live' : 'Polling'}
             </span>
           ) : null}
-          <button type="button" className="mn-link" onClick={() => setFairnessOpen(true)}>
-            Provably fair
-          </button>
         </div>
       </section>
 
@@ -504,13 +486,10 @@ export function MinesGame() {
         queue={state?.queue ?? null}
         busy={busy}
         notice={notice}
-        connected={connected}
-        clientSeed={state?.user.clientSeed ?? null}
         onJoin={() => void join()}
         onCancelQueue={() => void cancelQueue()}
         onDismiss={() => void dismiss()}
         onPlayAgain={playAgain}
-        onOpenFairness={() => setFairnessOpen(true)}
         onSignIn={() => openAuth({ view: 'telegram' })}
         now={nowTick}
       />

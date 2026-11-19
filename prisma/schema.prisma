@@ -411,9 +411,9 @@ model MinesMatch {
   clientSeed1 String
   clientSeed2 String
 
-  /// 50 characters: `B` for a bomb, `S` for a safe tile.
+  /// 35 characters: `B` for a bomb, `S` for a safe tile.
   board String
-  /// Index (0-49) of the Aegis Shield inside the safe tiles, when rolled.
+  /// Index (0-34) of the Aegis Shield inside the safe tiles, when rolled.
   shieldIndex Int?
   /// HMAC digest that generated the current board (first 32-byte block).
   hmacHex String
