@@ -74,6 +74,7 @@ export function ResultOverlay({
           <button
             type="button"
             className="mn-cta"
+           
             onClick={onPlayAgain}
             disabled={busy === 'queue'}
           >
