@@ -247,7 +247,7 @@ export function WizardConnectLogin({ mode, onSuccess }: WizardConnectLoginProps)
             connect()
           }}
           disabled={busy || state === 'connected'}
-          className="rounded-lg bg-[var(--t-green)] px-4 py-2 text-sm font-semibold text-black transition disabled:cursor-not-allowed disabled:opacity-50"
+          className="mn-cta mn-cta-fit"
         >
           {state === 'connected'
             ? walletName

@@ -1,4 +1,6 @@
 export const AUTH_EVENT = 'toops:auth'
+/** Fired after a successful sign-in so client widgets can refresh their viewer. */
+export const AUTH_CHANGED = 'toops:auth-changed'
 
 export type AuthView = 'telegram' | 'wallet'
 export type AuthMode = 'sign-in' | 'link'

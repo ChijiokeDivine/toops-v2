@@ -85,10 +85,7 @@ export async function SiteHeader() {
               >
                 Sign in
               </AuthTrigger>
-              <AuthTrigger
-                view="telegram"
-                className="flex h-[43px] cursor-pointer items-center rounded-[10px] bg-[var(--t-green)] px-3.5 text-base font-semibold text-[var(--t-green-ink)] shadow-[0_0_24px_rgba(0,250,127,0.28)] transition hover:brightness-110 active:scale-[0.98]"
-              >
+              <AuthTrigger view="telegram" className="mn-cta mn-cta-fit cursor-pointer px-3.5">
                 Sign up
               </AuthTrigger>
             </div>

@@ -39,12 +39,11 @@ export function Hero() {
         </h1>
 
         <div className="mt-[27px] flex w-full flex-col items-center gap-3 lg:mt-7 lg:flex-row lg:gap-3">
-          <Link
-            href="/play"
-            className="flex h-[43px] w-3/4 items-center justify-center rounded-xl bg-[var(--t-green)] text-base font-semibold text-[var(--t-green-ink)] shadow-[0_0_28px_rgba(0,250,127,0.25)] transition hover:brightness-110 active:scale-[0.98] lg:w-auto lg:px-5 lg:shadow-none"
-          >
-            Play Now
-          </Link>
+          <div className="flex w-3/4 flex-col items-center lg:w-auto">
+            <Link href="/play" className="mn-cta">
+              Play Now
+            </Link>
+          </div>
 
           <span className="hidden text-base font-semibold text-white lg:inline">or</span>
 

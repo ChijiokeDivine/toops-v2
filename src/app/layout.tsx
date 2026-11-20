@@ -3,7 +3,9 @@ import { Outfit } from 'next/font/google'
 import type { ReactNode } from 'react'
 import './globals.css'
 import './toops.css'
+import './chat.css'
 import { AuthDialog } from '@/components/auth/auth-dialog'
+import { ChatDock } from '@/components/chat/chat-dock'
 import { SettingsDialog } from '@/components/settings/settings-dialog'
 import { FloatingActions } from './_components/floating-actions'
 import { MobileNav } from './_components/mobile-nav'
@@ -44,6 +46,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         {children}
         <MobileNav />
         <FloatingActions />
+        <ChatDock />
         <AuthDialog />
         <SettingsDialog />
       </body>

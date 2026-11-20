@@ -169,7 +169,6 @@ export function AccountWalletPanel({
             <p className="mt-1 text-3xl font-semibold text-white">
               {balancePusd} <span className="text-sm font-medium text-[var(--t-muted)]">PUSD</span>
             </p>
-            
           </div>
 
           <div className={card}>
@@ -262,7 +261,7 @@ export function AccountWalletPanel({
             <button
               type="submit"
               disabled={withdrawing || !connectedAddress || !amount.trim()}
-              className="mt-3 w-full rounded-lg bg-[var(--t-green)] px-4 py-2 text-sm font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mn-cta mt-3"
             >
               {withdrawing ? 'Sending…' : `Withdraw in ${payoutAsset}`}
             </button>

@@ -43,10 +43,10 @@ export const ORIGINALS: Game[] = [
     image: '/images/dice.webp',
   },
   {
-    slug: 'twist',
-    name: 'Twist',
+    slug: 'roullete',
+    name: 'Roullete',
     gradient: 'linear-gradient(180deg,#a33af0 0%,#6a15c9 55%,#34086f 100%)',
-    image: '/images/twist.webp',
+    image: '/images/roullete.png',
   },
   {
     slug: 'Rando',

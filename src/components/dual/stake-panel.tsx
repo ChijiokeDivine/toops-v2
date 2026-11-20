@@ -132,15 +132,12 @@ export function StakePanel({
               type="button"
               onClick={onJoin}
               disabled={busy || validation != null}
-              className="mt-4 flex h-11 w-full items-center justify-center rounded-xl bg-[#00ff86] text-[16px] font-bold text-[#03170d] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_24px_rgba(0,255,134,0.16)] transition hover:brightness-105 active:scale-[0.995] disabled:cursor-not-allowed disabled:opacity-45"
+              className="mn-cta mt-4"
             >
               {busy ? 'Starting…' : 'Play'}
             </button>
           ) : (
-            <AuthTrigger
-              view="telegram"
-              className="mt-4 flex h-11 w-full items-center justify-center rounded-xl bg-[#00ff86] text-[16px] font-bold text-[#03170d] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_24px_rgba(0,255,134,0.16)] transition hover:brightness-105 active:scale-[0.995]"
-            >
+            <AuthTrigger view="telegram" className="mn-cta mt-4">
               Sign in
             </AuthTrigger>
           )}

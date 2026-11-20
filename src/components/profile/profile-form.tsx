@@ -40,8 +40,7 @@ const fieldShell = 'rounded-2xl border border-[var(--t-border)] bg-[var(--t-surf
 const labelClass = 'text-sm font-medium text-white'
 const inputClass =
   'h-11 min-w-0 flex-1 rounded-lg border border-[var(--t-border)] bg-[var(--t-surface-2)] px-3.5 text-sm text-white outline-none transition placeholder:text-[var(--t-muted)] focus:border-[var(--t-green)]'
-const saveClass =
-  'inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-[var(--t-green)] px-5 text-sm font-semibold text-[var(--t-green-ink)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45'
+const saveClass = 'mn-cta mn-cta-fit shrink-0'
 
 export function ProfileForm({ initialUsername, initialEmail, initialAvatarUrl }: ProfileFormProps) {
   const router = useRouter()

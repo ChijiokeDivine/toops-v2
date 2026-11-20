@@ -1,11 +1,15 @@
+'use client'
+
 import Link from 'next/link'
 import type { ComponentType, SVGProps } from 'react'
+import { openChat } from '@/components/chat/chat-events'
 import { CasinoIcon, ChatIcon, SearchIcon, SportsIcon } from './icons'
 
 type Item = {
   label: string
   Icon: ComponentType<SVGProps<SVGSVGElement>>
   href?: string
+  action?: 'chat'
 }
 
 const ITEMS: Item[] = [
@@ -13,7 +17,7 @@ const ITEMS: Item[] = [
   { label: 'Search', Icon: SearchIcon },
   { label: 'Multiplayer', Icon: CasinoIcon, href: '/multiplayer' },
   { label: 'Dual', Icon: SportsIcon, href: '/originals/crash' },
-  { label: 'Chat', Icon: ChatIcon },
+  { label: 'Chat', Icon: ChatIcon, action: 'chat' },
 ]
 
 const cell =
@@ -26,7 +30,7 @@ export function MobileNav() {
       className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--t-border)] bg-[rgba(8,13,23,0.96)] pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
       <ul className="grid h-[60px] grid-cols-4">
-        {ITEMS.map(({ label, Icon, href }) => (
+        {ITEMS.map(({ label, Icon, href, action }) => (
           <li key={label}>
             {href ? (
               <Link href={href} className={cell}>
@@ -34,7 +38,11 @@ export function MobileNav() {
                 <span className="text-[13px] font-medium leading-none">{label}</span>
               </Link>
             ) : (
-              <button type="button" className={`${cell} w-full`}>
+              <button
+                type="button"
+                className={`${cell} w-full`}
+                onClick={action === 'chat' ? openChat : undefined}
+              >
                 <Icon className="h-6 w-6" />
                 <span className="text-[13px] font-medium leading-none">{label}</span>
               </button>

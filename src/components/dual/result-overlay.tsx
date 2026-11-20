@@ -79,12 +79,7 @@ export function ResultOverlay({
                 {match.disputeReason}
               </p>
             ) : null}
-            <button
-              type="button"
-              onClick={onLeave}
-              disabled={busy != null}
-              className="mt-4 h-11 w-full rounded-xl bg-[var(--t-green)] text-[12px] font-black uppercase tracking-[0.12em] text-[var(--t-green-ink)] transition hover:brightness-110 disabled:opacity-50"
-            >
+            <button type="button" onClick={onLeave} disabled={busy != null} className="mn-cta mt-4">
               Back to lobby
             </button>
           </div>
@@ -181,7 +176,7 @@ export function ResultOverlay({
                   type="button"
                   onClick={onRematch}
                   disabled={busy != null || selfRequested}
-                  className="h-10 flex-1 rounded-xl bg-[var(--t-green)] text-[12px] font-black uppercase tracking-[0.1em] text-[var(--t-green-ink)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="mn-cta flex-1"
                 >
                   {busy === 'rematch'
                     ? 'Starting…'

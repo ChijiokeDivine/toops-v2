@@ -437,7 +437,7 @@ export function DualGame() {
               setLoading(true)
               void refresh()
             }}
-            className="h-9 rounded-lg bg-[var(--t-green)] px-4 text-[11px] font-black uppercase tracking-[0.08em] text-[var(--t-green-ink)] transition hover:brightness-110"
+            className="mn-cta mn-cta-fit"
           >
             Retry
           </button>
@@ -546,10 +546,10 @@ export function DualGame() {
                     type="button"
                     onClick={cashout}
                     disabled={!canPressCashOut}
-                    className={`dual-cashout flex h-12 w-full items-center justify-center gap-3 rounded-xl px-4 text-[14px] font-black uppercase tracking-[0.1em] transition ${
+                    className={`dual-cashout gap-3 ${
                       canPressCashOut
-                        ? 'bg-[var(--t-green)] text-[var(--t-green-ink)] shadow-[0_0_34px_rgba(0,250,127,0.24)] hover:brightness-110 active:scale-[0.995]'
-                        : 'border border-white/[0.08] bg-white/[0.03] text-white/45'
+                        ? 'mn-cta'
+                        : 'flex h-12 w-full items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-[14px] font-black uppercase tracking-[0.1em] text-white/45'
                     }`}
                   >
                     <span>
@@ -585,7 +585,7 @@ export function DualGame() {
                       type="button"
                       onClick={rematch}
                       disabled={busy != null || selfPlayer?.rematchRequested}
-                      className="h-8 rounded-lg bg-[var(--t-green)] px-3 text-[10px] font-black uppercase tracking-[0.08em] text-[var(--t-green-ink)] transition hover:brightness-110 disabled:opacity-45"
+                      className="mn-cta mn-cta-fit"
                     >
                       {selfPlayer?.rematchRequested ? 'Requested' : 'Rematch'}
                     </button>

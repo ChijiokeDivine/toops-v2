@@ -31,10 +31,7 @@ function SignedOut() {
         Manage your avatar, username, and email, and keep track of your toops statistics.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
-        <AuthTrigger
-          view="telegram"
-          className="cursor-pointer rounded-lg bg-[var(--t-green)] px-4 py-2.5 text-sm font-semibold text-[var(--t-green-ink)] shadow-[0_0_24px_rgba(0,250,127,0.24)] transition hover:brightness-110 active:scale-[0.98]"
-        >
+        <AuthTrigger view="telegram" className="mn-cta mn-cta-fit cursor-pointer">
           Continue with Telegram
         </AuthTrigger>
         <AuthTrigger

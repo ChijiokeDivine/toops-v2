@@ -865,58 +865,7 @@
   gap: 8px;
 }
 
-.mn-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 44px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--pn-green);
-  color: #06090e;
-  font: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  /* top highlight, 4px darker bottom lip, soft green glow */
-  box-shadow:
-    inset 0 1px 0 #91ffcb,
-    inset 0 -4px 0 #00d16e,
-    0 0 12px rgba(0, 255, 134, 0.25);
-  transition:
-    filter 140ms ease,
-    transform 90ms ease,
-    opacity 140ms ease;
-}
-
-.mn-cta:hover:not(:disabled) {
-  filter: brightness(1.06);
-}
-
-.mn-cta:active:not(:disabled) {
-  transform: scale(0.99);
-}
-
-.mn-cta:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.mn-cta-ghost {
-  border: 1px solid var(--pn-line);
-  background: transparent;
-  color: var(--pn-muted);
-  box-shadow: none;
-}
-
-.mn-cta-ghost:hover:not(:disabled) {
-  background: var(--pn-seg);
-  color: var(--pn-text);
-  filter: none;
-}
+/* `.mn-cta` / `.mn-cta-ghost` live in toops.css so every page shares them. */
 
 /* ---------- Queue / live / finished ---------- */
 

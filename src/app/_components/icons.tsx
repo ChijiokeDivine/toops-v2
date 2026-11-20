@@ -482,6 +482,126 @@ export function UploadIcon(props: IconProps) {
   )
 }
 
+/* ── Chat ────────────────────────────────────────────── */
+
+export function SendIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...a11y} {...props}>
+      <path
+        d="M21.5 2.5 2.8 10c-.9.4-.9 1.6 0 1.9l6 2.2 2.2 6c.4.9 1.6.9 1.9 0l7.5-18.7c.3-.8-.5-1.6-1.4-1.3Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.8 14.1 21.5 2.5"
+        stroke="var(--icon-cut, #00fa7f)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function SmileIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      {...a11y}
+      {...props}
+    >
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M8.6 14.2c.8 1.4 2 2.1 3.4 2.1s2.6-.7 3.4-2.1" />
+      <circle cx="9.1" cy="9.7" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="14.9" cy="9.7" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function AtIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...a11y}
+      {...props}
+    >
+      <circle cx="12" cy="12" r="3.7" />
+      <path d="M15.7 8.5v4.2c0 1.7 1 2.6 2.3 2.6 1.6 0 2.5-1.4 2.5-3.4a8.5 8.5 0 1 0-3.4 6.8" />
+    </svg>
+  )
+}
+
+export function CoinsIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...a11y}
+      {...props}
+    >
+      <circle cx="9" cy="9.5" r="5.8" />
+      <circle cx="15" cy="14.5" r="5.8" />
+      <path d="M15 11.8v5.4M12.3 14.5h5.4" />
+    </svg>
+  )
+}
+
+export function ArrowDownIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...a11y}
+      {...props}
+    >
+      <path d="M12 4.5v15M6.4 13.9 12 19.5l5.6-5.6" />
+    </svg>
+  )
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      {...a11y}
+      {...props}
+    >
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
+export function FlagUkIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 22 16" preserveAspectRatio="none" {...a11y} {...props}>
+      <rect width="22" height="16" fill="#012169" />
+      <path d="M0 0l22 16M22 0 0 16" stroke="#fff" strokeWidth="3.4" />
+      <path d="M0 0l22 16M22 0 0 16" stroke="#c8102e" strokeWidth="1.9" />
+      <path d="M11 0v16M0 8h22" stroke="#fff" strokeWidth="5.4" />
+      <path d="M11 0v16M0 8h22" stroke="#c8102e" strokeWidth="3.1" />
+    </svg>
+  )
+}
+
 /* ── Brand marks ─────────────────────────────────────── */
 
 const STAR_POINTS = Array.from({ length: 24 }, (_, i) => {

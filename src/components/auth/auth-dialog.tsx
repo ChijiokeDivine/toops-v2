@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  AUTH_CHANGED,
   AUTH_EVENT,
   consumePendingAuth,
   type AuthMode,
@@ -51,6 +52,7 @@ export function AuthDialog() {
     // Never navigate after authentication: stay on the page the user opened the
     // popup from (usually the homepage) and let the session re-render in place.
     router.refresh()
+    window.dispatchEvent(new Event(AUTH_CHANGED))
   }, [router])
 
   useEffect(() => {
