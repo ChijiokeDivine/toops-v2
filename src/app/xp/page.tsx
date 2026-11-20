@@ -219,9 +219,7 @@ export default async function XpPage() {
         <div>
         
           <h1 className="mt-1 flex items-center gap-2.5 text-3xl font-bold tracking-tight text-white">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#ffd21a]/10 text-[#ffd21a]">
-              <XpIcon className="h-6 w-6" />
-            </span>
+          
             Experience
           </h1>
           <p className="mt-2 max-w-xl text-sm text-[var(--t-muted)]">

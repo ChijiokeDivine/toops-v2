@@ -4,6 +4,7 @@ import { ProfileFavorites } from '@/components/profile/profile-favorites'
 import { ProfileForm } from '@/components/profile/profile-form'
 import { ProfileSidebar } from '@/components/profile/profile-sidebar'
 import { ProfileStats } from '@/components/profile/profile-stats'
+import { ProfileTips } from '@/components/profile/profile-tips'
 import { getSession } from '@/lib/auth/session'
 import { UserIcon } from '../_components/icons'
 
@@ -86,6 +87,7 @@ export default async function ProfilePage() {
           </div>
 
           <ProfileStats userId={user.id} />
+          <ProfileTips userId={user.id} />
           <ProfileFavorites />
         </div>
       </div>

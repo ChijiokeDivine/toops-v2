@@ -6,7 +6,7 @@ export function CategoryCard({ title, playing, href, slug, image }: Category) {
   return (
     <Link
       href={href}
-      className={`group relative block h-[101px] overflow-hidden rounded-[10px] md:rounded-[20px] transition duration-200 hover:brightness-110 lg:h-full ${
+      className={`group relative block h-[101px] overflow-hidden rounded-[10px] md:rounded-[15px] transition duration-200 hover:brightness-110 lg:h-full ${
         slug === 'multiplayer' ? 'card-multiplayer' : 'card-dual'
       }`}
     >
