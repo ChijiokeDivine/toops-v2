@@ -39,7 +39,7 @@ async function toAvatarDataUrl(file: File): Promise<string> {
 const fieldShell = 'rounded-2xl border border-[var(--t-border)] bg-[var(--t-surface)] p-4 lg:p-5'
 const labelClass = 'text-sm font-medium text-white'
 const inputClass =
-  'h-11 min-w-0 flex-1 rounded-lg border border-[var(--t-border)] bg-[var(--t-surface-2)] px-3.5 text-sm text-white outline-none transition placeholder:text-[var(--t-muted)] focus:border-[var(--t-green)]'
+  'h-11 py-3 min-w-0 flex-1 rounded-lg border border-[var(--t-border)] bg-[var(--t-surface-2)] px-3.5 text-sm text-white outline-none transition placeholder:text-[var(--t-muted)] focus:border-[var(--t-green)]'
 const saveClass = 'mn-cta mn-cta-fit shrink-0'
 
 export function ProfileForm({ initialUsername, initialEmail, initialAvatarUrl }: ProfileFormProps) {

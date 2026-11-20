@@ -210,8 +210,8 @@
 }
 
 .mn-score {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 500;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -1056,7 +1056,7 @@
 
 .mn-result-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-bottom: 14px;
 }

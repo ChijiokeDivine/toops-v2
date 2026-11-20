@@ -15,8 +15,7 @@ export function Hero() {
     <section className="hero-surface relative isolate flex flex-col items-center overflow-hidden rounded-[20px] px-4 pb-9 pt-[37px] text-center lg:h-72 lg:items-start lg:p-[38px] lg:text-left">
       {/* ── decoration ───────────────────────────────── */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        {/* mobile: small dim mark, top right */}
-        <LogoMark className="absolute right-10 top-6 h-5 w-auto opacity-40 lg:hidden" />
+   
         {/* sparkles */}
         <span className="absolute left-[44%] top-[22%] h-1.5 w-1.5 rotate-45 bg-emerald-300/40 blur-[1px] lg:hidden" />
         <span className="absolute right-[18%] top-[34%] h-1.5 w-1.5 rotate-45 bg-emerald-300/30 blur-[1px] lg:hidden" />

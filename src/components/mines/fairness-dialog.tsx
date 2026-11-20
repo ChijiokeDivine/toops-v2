@@ -94,13 +94,7 @@ export function FairnessDialog({ open, onClose, match, clientSeed }: FairnessDia
           </button>
         </div>
 
-        <p className="mn-modal-lead">
-          {MINES_BOMB_COUNT} bombs and {MINES_SAFE_COUNT} safe tiles are shuffled from{' '}
-          <code>HMAC-SHA256(serverSeed, clientSeed1 + clientSeed2 + nonce)</code>. The first word
-          rolls the {(MINES_SHIELD_ODDS * 100).toFixed(1)}% shield chance; the following words pick
-          the bomb tiles.
-        </p>
-
+       
         <div className="mn-fair-list">
           <Row
             label="Server seed hash"
@@ -153,7 +147,7 @@ export function FairnessDialog({ open, onClose, match, clientSeed }: FairnessDia
 
         <p className="mn-modal-foot">
           The unhashed server seed is published after settlement, so anyone can recompute every
-          tile. Cursor telemetry never affects the board.
+          tile. 
         </p>
       </div>
     </div>

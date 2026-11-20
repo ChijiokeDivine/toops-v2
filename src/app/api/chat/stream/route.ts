@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import { joinChatPresence, leaveChatPresence, subscribeChatEvents } from '@/lib/chat/bus'
+import {
+  joinChatPresence,
+  leaveChatPresence,
+  subscribeChatEvents,
+  touchChatPresence,
+} from '@/lib/chat/bus'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -9,7 +14,8 @@ export const maxDuration = 300
 /**
  * Server-Sent Events keeps chat realtime on serverless hosting. The message
  * POST writes the durable row and publishes it on the bus; this stream fans it
- * out to every open panel. Presence is the number of streams on this instance.
+ * out to every open panel. Presence is the number of open streams across every
+ * instance, kept in Redis and refreshed by the heartbeat below.
  */
 export async function GET(request: Request) {
   const encoder = new TextEncoder()
@@ -38,7 +44,7 @@ export async function GET(request: Request) {
         if (ping) clearInterval(ping)
         if (lifetime) clearTimeout(lifetime)
         unsubscribe?.()
-        leaveChatPresence(connectionId)
+        void leaveChatPresence(connectionId).catch(() => undefined)
         try {
           controller.close()
         } catch {
@@ -62,11 +68,18 @@ export async function GET(request: Request) {
 
       // Subscribe first, then announce presence so no message slips through the
       // gap between the initial snapshot and the live feed.
-      const online = joinChatPresence(connectionId)
+      const online = await joinChatPresence(connectionId)
+      if (closed) {
+        void leaveChatPresence(connectionId).catch(() => undefined)
+        return
+      }
       send('ready', { online, at: Date.now() })
       send('presence', { online })
 
-      ping = setInterval(() => send('ping', { at: Date.now() }), 15_000)
+      ping = setInterval(() => {
+        void touchChatPresence(connectionId).catch(() => undefined)
+        send('ping', { at: Date.now() })
+      }, 15_000)
 
       // Close before the platform hard limit; EventSource reconnects and the
       // panel refetches the latest page on open, so nothing is lost.

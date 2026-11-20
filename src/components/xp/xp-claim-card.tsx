@@ -134,9 +134,7 @@ export function XpClaimCard({ canClaim, claimAmount, streak, nextClaimAt }: XpCl
         {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
       </div>
 
-      <p className="mt-4 text-xs text-[var(--t-muted)]">
-        Streak bonus: +25 XP for each consecutive day, up to +150 XP on day 7 and beyond.
-      </p>
+     
     </div>
   )
 }

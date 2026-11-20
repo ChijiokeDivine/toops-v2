@@ -217,7 +217,7 @@ export default async function XpPage() {
     <main className="mx-auto w-full max-w-[1100px] px-3 pb-24 pt-6 lg:px-4 lg:pb-12">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ffd21a]">Rewards</p>
+        
           <h1 className="mt-1 flex items-center gap-2.5 text-3xl font-bold tracking-tight text-white">
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#ffd21a]/10 text-[#ffd21a]">
               <XpIcon className="h-6 w-6" />

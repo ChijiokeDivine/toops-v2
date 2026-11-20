@@ -85,7 +85,7 @@ export default async function ProfilePage() {
             />
           </div>
 
-          <ProfileStats />
+          <ProfileStats userId={user.id} />
           <ProfileFavorites />
         </div>
       </div>

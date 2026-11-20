@@ -64,6 +64,8 @@ export function useChatFeed(open: boolean) {
   const [connection, setConnection] = useState<ChatConnection>('connecting')
   const stateRef = useRef(state)
   const pendingRef = useRef(pending)
+  /** Once the stream reports presence, a slower bootstrap must not reset it. */
+  const presenceLiveRef = useRef(false)
 
   stateRef.current = state
   pendingRef.current = pending
@@ -81,7 +83,7 @@ export function useChatFeed(open: boolean) {
       ...previous,
       status: 'ready',
       viewer: data.viewer ?? previous.viewer,
-      online: data.online,
+      online: presenceLiveRef.current ? previous.online : data.online,
       maxLength: data.maxLength,
       hasMore: data.hasMore,
       messages: mergeMessages(previous.messages, data.messages),
@@ -107,6 +109,7 @@ export function useChatFeed(open: boolean) {
 
   useEffect(() => {
     if (!open) {
+      presenceLiveRef.current = false
       setState(EMPTY)
       setPending([])
       setConnection('connecting')
@@ -118,6 +121,7 @@ export function useChatFeed(open: boolean) {
     let source: EventSource | null = null
     let connectedOnce = false
 
+    presenceLiveRef.current = false
     setState({ ...EMPTY, status: 'loading' })
     setPending([])
     setConnection('connecting')
@@ -166,6 +170,7 @@ export function useChatFeed(open: boolean) {
       try {
         const data = JSON.parse((event as MessageEvent<string>).data) as { online?: number }
         if (typeof data.online === 'number') {
+          presenceLiveRef.current = true
           setState((previous) => ({ ...previous, online: data.online as number }))
         }
       } catch {
@@ -177,6 +182,7 @@ export function useChatFeed(open: boolean) {
       try {
         const data = JSON.parse((event as MessageEvent<string>).data) as { online?: number }
         if (typeof data.online === 'number') {
+          presenceLiveRef.current = true
           setState((previous) => ({ ...previous, online: data.online as number }))
         }
       } catch {

@@ -271,7 +271,7 @@ export function ChatDock() {
   const used = countChatChars(draft)
   const overLimit = used > maxLength
   const canSend = Boolean(viewer) && draft.trim().length > 0 && !overLimit && !sending
-  const onlineLabel = ONLINE_FORMAT.format(Math.max(online, 0))
+  const onlineLabel = ONLINE_FORMAT.format(Math.max(online, 1))
 
   return (
     <>

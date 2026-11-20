@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
     const payload: ChatBootstrap = {
       viewer: session ? toChatUserView(session.user) : null,
-      online: getChatOnlineCount(),
+      online: await getChatOnlineCount(),
       maxLength: CHAT_MAX_LENGTH,
       messages: page.messages,
       hasMore: page.hasMore,

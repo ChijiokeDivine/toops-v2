@@ -1,19 +1,46 @@
 import { CalendarIcon, CasinoIcon, ChartUpIcon, CoinIcon } from '@/app/_components/icons'
+import { prisma } from '@/lib/db'
+import { formatPusdUnits } from '@/lib/pusd'
 
-const STATS = [
-  { label: 'Games Played', value: '0', Icon: CasinoIcon },
-  { label: 'Total Wagered', value: '$0.00', Icon: CoinIcon },
-  { label: 'Wagered Today', value: '$0.00', Icon: CalendarIcon },
-  { label: 'Net Profit', value: '$0.00', Icon: ChartUpIcon },
-]
+function usd(units: bigint): string {
+  const negative = units < 0n
+  return `${negative ? '-' : ''}$${formatPusdUnits(negative ? -units : units)}`
+}
 
-export function ProfileStats() {
+function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+}
+
+export async function ProfileStats({ userId }: { userId: string }) {
+  const [bets, betsToday, net] = await Promise.all([
+    prisma.ledgerEntry.aggregate({
+      where: { userId, kind: 'BET' },
+      _count: { _all: true },
+      _sum: { amountPusd: true },
+    }),
+    prisma.ledgerEntry.aggregate({
+      where: { userId, kind: 'BET', createdAt: { gte: startOfUtcDay(new Date()) } },
+      _sum: { amountPusd: true },
+    }),
+    prisma.ledgerEntry.aggregate({
+      where: { userId, kind: { in: ['BET', 'WIN', 'ADJUSTMENT'] } },
+      _sum: { amountPusd: true },
+    }),
+  ])
+
+  const stats = [
+    { label: 'Games Played', value: String(bets._count._all), Icon: CasinoIcon },
+    { label: 'Total Wagered', value: usd(-(bets._sum.amountPusd ?? 0n)), Icon: CoinIcon },
+    { label: 'Wagered Today', value: usd(-(betsToday._sum.amountPusd ?? 0n)), Icon: CalendarIcon },
+    { label: 'Net Profit', value: usd(net._sum.amountPusd ?? 0n), Icon: ChartUpIcon },
+  ]
+
   return (
     <section className="mt-7">
       <h2 className="text-xl font-bold text-white">Statistics</h2>
 
       <div className="mt-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        {STATS.map(({ label, value, Icon }) => (
+        {stats.map(({ label, value, Icon }) => (
           <div
             key={label}
             className="flex items-start justify-between gap-3 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)] px-3.5 py-3"

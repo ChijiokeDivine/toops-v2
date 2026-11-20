@@ -27,8 +27,8 @@ export function PlayerCard({ player, isSelf, isTurn, live }: PlayerCardProps) {
 
       <div className="mn-player-info">
         <div className="mn-player-name-row">
-          <span className="mn-player-name">{player.displayName}</span>
-          {isSelf ? <span className="mn-you">YOU</span> : null}
+          <span className="mn-player-name hidden md:block">{player.displayName}</span>
+         
         </div>
         <div className="mn-player-meta">
           <span className="mn-stat">

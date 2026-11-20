@@ -46,10 +46,7 @@ export function ResultOverlay({
             <span>Your score</span>
             <strong>{formatPoints(self?.score ?? 0)}</strong>
           </div>
-          <div>
-            <span>Opponent</span>
-            <strong>{formatPoints(opponent?.score ?? 0)}</strong>
-          </div>
+         
           <div className={won ? 'is-payout' : undefined}>
             <span>{cancelled ? 'Refunded' : 'Payout'}</span>
             <strong>{cancelled ? usd(match.stakePusd) : `${won ? '+' : ''}${usd(payout)}`}</strong>

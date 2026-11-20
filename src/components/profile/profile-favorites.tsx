@@ -5,7 +5,7 @@ export function ProfileFavorites() {
   return (
     <section className="mt-7 rounded-2xl border border-[var(--t-border)] bg-[var(--t-surface)] p-4 lg:p-5">
       <div className="flex items-center gap-2">
-        <StarIcon className="h-4 w-4 text-[#ffd21a]" />
+        
         <h2 className="text-lg font-semibold text-white">Your Favorites</h2>
       </div>
 
