@@ -1,0 +1,201 @@
+/* src/app/originals/pocket-dice/pocket-dice.css */
+/* ──────────────────────────────────────────────────────────
+   Pocket Dice
+   The board is driven frame by frame from JavaScript
+   (components/pocket-dice/roll-choreography.ts); this file only
+   holds what CSS has to own: the 3D die, the cup shell and the
+   result flourishes. Class prefix: pd-
+   ────────────────────────────────────────────────────────── */
+
+.pd-stage {
+  --pd-die: 80px;
+  background: #0c1116;
+  contain: layout paint;
+}
+
+/* ── Cup ───────────────────────────────────────────────── */
+
+.pd-cup {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 20;
+  pointer-events: none;
+  will-change: transform;
+  visibility: hidden;
+  filter: drop-shadow(0 16px 14px rgba(0, 0, 0, 0.55));
+}
+
+.pd-cup.is-ready {
+  visibility: visible;
+}
+
+/* ── Die ───────────────────────────────────────────────── */
+
+.pd-die {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  width: var(--pd-die);
+  height: var(--pd-die);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition:
+    opacity 280ms ease,
+    filter 360ms ease;
+}
+
+.pd-die.is-dim {
+  filter: brightness(0.58) saturate(0.7);
+}
+
+.pd-cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.pd-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: 15%;
+  border-radius: 19%;
+  background: linear-gradient(145deg, #ffffff 0%, #eef1f5 48%, #d6dce4 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(10, 16, 24, 0.08),
+    inset 0 -7px 11px rgba(20, 30, 45, 0.1),
+    inset 0 5px 8px rgba(255, 255, 255, 0.95);
+  backface-visibility: hidden;
+}
+
+.pd-f1 {
+  transform: translateZ(calc(var(--pd-die) / 2));
+}
+.pd-f6 {
+  transform: rotateY(180deg) translateZ(calc(var(--pd-die) / 2));
+}
+.pd-f3 {
+  transform: rotateY(90deg) translateZ(calc(var(--pd-die) / 2));
+}
+.pd-f4 {
+  transform: rotateY(-90deg) translateZ(calc(var(--pd-die) / 2));
+}
+.pd-f2 {
+  transform: rotateX(90deg) translateZ(calc(var(--pd-die) / 2));
+}
+.pd-f5 {
+  transform: rotateX(-90deg) translateZ(calc(var(--pd-die) / 2));
+}
+
+/* Three crossed planes fill the corner gaps the rounded faces leave. */
+.pd-core {
+  position: absolute;
+  inset: 4%;
+  background: #cfd5dd;
+  border-radius: 12%;
+}
+.pd-core-b {
+  transform: rotateY(90deg);
+}
+.pd-core-c {
+  transform: rotateX(90deg);
+}
+
+.pd-pip {
+  width: 76%;
+  height: 76%;
+  margin: auto;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #3b434d 0%, #0b0e12 66%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.16);
+}
+
+/* ── Ground shadow and result flourishes ───────────────── */
+
+.pd-shadow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0));
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.pd-halo {
+  position: absolute;
+  z-index: 6;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(0, 250, 127, 0.38), rgba(0, 250, 127, 0));
+  animation: pd-halo-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pd-halo.is-tie {
+  background: radial-gradient(closest-side, rgba(255, 223, 26, 0.26), rgba(255, 223, 26, 0));
+}
+
+.pd-chip {
+  position: absolute;
+  z-index: 40;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: pd-chip-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pd-halo-in {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes pd-chip-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.pd-live-dot {
+  animation: pd-dot 1.3s ease-in-out infinite;
+}
+
+@keyframes pd-dot {
+  0%,
+  100% {
+    opacity: 0.45;
+    box-shadow: 0 0 0 0 rgba(0, 250, 127, 0.3);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 0 4px rgba(0, 250, 127, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-halo,
+  .pd-chip,
+  .pd-live-dot {
+    animation: none !important;
+  }
+  .pd-die {
+    transition: none;
+  }
+}

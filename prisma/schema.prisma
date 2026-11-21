@@ -46,16 +46,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  platformWallet   PlatformWallet?
-  sessions         Session[]
-  challenges       AuthChallenge[]
-  deposits         Deposit[]
-  withdrawals      Withdrawal[]
-  ledgerEntries    LedgerEntry[]
-  xpClaims         XpClaim[]
-  dualTickets      DualTicket[]
-  dualMatchPlayers DualMatchPlayer[]
-  dualWins         DualMatch[]       @relation("DualWinner")
+  platformWallet    PlatformWallet?
+  sessions          Session[]
+  challenges        AuthChallenge[]
+  deposits          Deposit[]
+  withdrawals       Withdrawal[]
+  ledgerEntries     LedgerEntry[]
+  xpClaims          XpClaim[]
+  dualTickets       DualTicket[]
+  dualMatchPlayers  DualMatchPlayer[]
+  dualWins          DualMatch[]        @relation("DualWinner")
+  pocketDicePlayers PocketDicePlayer[]
 
   minesTickets      MinesTicket[]
   minesMatchPlayers MinesMatchPlayer[]
@@ -509,4 +510,66 @@ model ChatTip {
 
   @@index([fromUserId, createdAt])
   @@index([toUserId, createdAt])
+}
+
+// ──────────────────────────────────────────────────────────
+// Pocket Dice
+// ──────────────────────────────────────────────────────────
+
+enum PocketDiceStatus {
+  WAITING
+  SETTLED
+  CANCELLED
+}
+
+/// One shared-pot dice round. Players pick 2-12, the two dice decide the
+/// winning numbers, and the whole pot is paid out in the same transaction.
+model PocketDiceMatch {
+  id     String           @id @default(cuid())
+  status PocketDiceStatus @default(WAITING)
+
+  /// Every player locks exactly this amount.
+  stakePusd BigInt
+  /// stakePusd * player count, filled as players join.
+  potPusd   BigInt @default(0)
+
+  die1           Int?
+  die2           Int?
+  /// die1 + die2.
+  roll           Int?
+  /// True when at least one player picked the rolled total.
+  exactHit       Boolean @default(false)
+  /// The rolled total, or the two closest chosen numbers.
+  winningNumbers Int[]   @default([])
+
+  /// Published before the round; revealed after it settles.
+  serverSeed     String
+  serverSeedHash String
+  nonce          Int    @default(0)
+
+  /// When the join window closes and the dice roll.
+  startsAt  DateTime
+  createdAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  players PocketDicePlayer[]
+
+  @@index([status, stakePusd, startsAt])
+}
+
+model PocketDicePlayer {
+  id      String          @id @default(cuid())
+  matchId String
+  match   PocketDiceMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The player's locked total, 2-12.
+  pick       Int
+  /// Credit from the pot; 0 when the pick did not win.
+  payoutPusd BigInt   @default(0)
+  createdAt  DateTime @default(now())
+
+  @@unique([matchId, userId])
+  @@index([userId, createdAt])
 }
