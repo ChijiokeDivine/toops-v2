@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { openAuth } from '@/components/auth/auth-events'
+import { playGameSound } from '@/components/sound/game-sfx'
 import {
   MINES_BOARD_SIZE,
   MINES_DEFAULT_STAKE_PUSD,
@@ -49,6 +50,10 @@ export function MinesGame() {
   const seatRef = useRef<MinesSeat | null>(null)
   const lastPositionRef = useRef({ x: 0.5, y: 0.5 })
   const cursorServerAtRef = useRef(0)
+  const lastPickSoundRef = useRef<string | null>(null)
+  const turnSoundRef = useRef<string | null>(null)
+  const resultSoundRef = useRef<string | null>(null)
+  const tickSoundRef = useRef(-1)
 
   const match = state?.match ?? null
   const seat = match?.viewer.seat ?? null
@@ -262,6 +267,60 @@ export function MinesGame() {
     match.winnerSeat == null &&
     msLeft > 0
 
+  // strike / reveal sounds, synchronised with each broadcast pick
+  useEffect(() => {
+    const lastPick = match?.lastPick
+    if (!match || !lastPick) return
+    const key = `${match.id}:${lastPick.at}`
+    if (lastPickSoundRef.current === key) return
+    lastPickSoundRef.current = key
+    if (lastPick.kind === 'BOMB') {
+      playGameSound(lastPick.shieldUsed ? 'shield' : 'bomb')
+    } else if (lastPick.shieldGained) {
+      playGameSound('shield')
+    } else {
+      playGameSound('safe')
+    }
+  }, [match?.id, match?.lastPick])
+
+  // a short chime the moment the turn hands over to you
+  useEffect(() => {
+    if (!match) return
+    const key = `${match.id}:${match.turn}:${match.status}`
+    if (turnSoundRef.current === key) return
+    turnSoundRef.current = key
+    if (match.status === 'LIVE' && seat != null && match.turn === seat) playGameSound('turn')
+  }, [match, seat])
+
+  // final outcome, once per match
+  useEffect(() => {
+    if (!match) return
+    if (match.status !== 'SETTLED' && match.status !== 'CANCELLED') return
+    const key = `${match.id}:${match.status}`
+    if (resultSoundRef.current === key) return
+    resultSoundRef.current = key
+    if (match.status === 'CANCELLED') {
+      playGameSound('void')
+    } else {
+      playGameSound(match.winnerSeat != null && match.winnerSeat === seat ? 'win' : 'lose')
+    }
+  }, [match, seat])
+
+  // clock ticks through the final seconds of a turn
+  useEffect(() => {
+    if (!match || match.status !== 'LIVE' || match.winnerSeat != null) {
+      tickSoundRef.current = -1
+      return
+    }
+    const seconds = Math.ceil(msLeft / 1000)
+    if (msLeft > 5_000) {
+      tickSoundRef.current = -1
+    } else if (msLeft > 0 && seconds !== tickSoundRef.current) {
+      tickSoundRef.current = seconds
+      playGameSound('tick')
+    }
+  }, [msLeft, match?.status, match?.winnerSeat])
+
   const self = useMemo(
     () => match?.players.find((player) => player.seat === seat) ?? null,
     [match, seat],
@@ -275,6 +334,7 @@ export function MinesGame() {
   const pick = useCallback(
     async (tile: number) => {
       if (!matchId || !canPick || pendingTile != null) return
+      playGameSound('click')
       setPendingTile(tile)
       setNotice(null)
       try {
@@ -331,6 +391,7 @@ export function MinesGame() {
         error?: string
       } | null
       if (!response.ok) throw new Error(data?.error ?? 'Unable to join the queue.')
+      playGameSound('chip')
       await refresh()
     } catch (error) {
       setNotice({
@@ -352,6 +413,7 @@ export function MinesGame() {
       })
       const data = (await response.json().catch(() => null)) as { error?: string } | null
       if (!response.ok) throw new Error(data?.error ?? 'Unable to cancel the search.')
+      playGameSound('leave')
       await refresh()
     } catch (error) {
       setNotice({

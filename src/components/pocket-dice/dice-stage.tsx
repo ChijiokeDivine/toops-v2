@@ -3,12 +3,14 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { resolveDuel, type PocketDiceValues } from '@/lib/pocket-dice/rules'
+import { playGameSound, type GameSound } from '@/components/sound/game-sfx'
 import { DiceCup } from './dice-cup'
 import { DicePlate } from './dice-plate'
 import { Die } from './die'
 import {
   CUP_ART,
   ROLL_SETTLED_MS,
+  ROLL_TIMING,
   ROLL_TOTAL_MS,
   TOP_VIEW_DIE_SCALE,
   computeLayout,
@@ -304,6 +306,7 @@ export function DiceStage({
       cancelAnimationFrame(viewFrameRef.current)
       viewRef.current = topViewRef.current ? 1 : 0
       paintPlate()
+      playGameSound('land')
       finish()
       return
     }
@@ -311,6 +314,20 @@ export function DiceStage({
     phaseRef.current = 'rolling'
     loopRunningRef.current = true
     const startedAt = performance.now()
+
+    // Cup, toss and bounce sounds are scheduled on the same clock as the animation.
+    const soundTimers: number[] = []
+    const later = (delay: number, sound: GameSound, volume = 1) => {
+      soundTimers.push(window.setTimeout(() => playGameSound(sound, { volume }), delay))
+    }
+    later(0, 'shake')
+    later(ROLL_TIMING.releaseFirst, 'toss')
+    later(ROLL_TIMING.releaseSecond, 'toss')
+    for (const offset of [380, 680, 910]) {
+      later(ROLL_TIMING.releaseFirst + offset, 'bounce')
+      later(ROLL_TIMING.releaseSecond + offset, 'bounce', 0.8)
+    }
+    later(ROLL_SETTLED_MS, 'land')
 
     const tick = (now: number) => {
       const elapsed = now - startedAt
@@ -326,6 +343,7 @@ export function DiceStage({
     frameRef.current = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(frameRef.current)
+      soundTimers.forEach((timer) => window.clearTimeout(timer))
       loopRunningRef.current = false
     }
   }, [rollId, ready, reducedMotion, paintCup, paintDice, paintStatic, paintPlate, moveCamera])

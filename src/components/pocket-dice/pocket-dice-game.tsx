@@ -1,7 +1,8 @@
 // src/components/pocket-dice/pocket-dice-game.tsx
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { playGameSound } from '@/components/sound/game-sfx'
 import {
   POCKET_DICE_DEFAULT_STAKE_PUSD,
   POCKET_DICE_MAX_PLAYERS,
@@ -66,6 +67,8 @@ export function PocketDiceGame() {
   const [dismissed, setDismissed] = useState<string | null>(null)
   const [settledId, setSettledId] = useState<string | null>(null)
   const [nowTick, setNowTick] = useState(() => Date.now())
+  const noticedStatusRef = useRef<string | null>(null)
+  const countdownTickRef = useRef(-1)
 
   const match = dice.state?.match ?? null
   const visible = match && match.id !== dismissed ? match : null
@@ -73,6 +76,7 @@ export function PocketDiceGame() {
 
   useEffect(() => {
     setSettledId(null)
+    countdownTickRef.current = -1
   }, [visible?.id])
 
   useEffect(() => {
@@ -82,22 +86,52 @@ export function PocketDiceGame() {
     return () => window.clearInterval(timer)
   }, [visible?.id, visible?.status])
 
+  // refunded / cancelled rounds get a neutral cue, once per state
+  useEffect(() => {
+    if (!visible) return
+    const key = `${visible.id}:${visible.status}`
+    if (noticedStatusRef.current === key) return
+    noticedStatusRef.current = key
+    if (visible.status === 'CANCELLED') playGameSound('void')
+  }, [visible])
+
+  // countdown ticks through the last three seconds before the cup rolls
+  useEffect(() => {
+    if (!visible || visible.status !== 'WAITING') {
+      countdownTickRef.current = -1
+      return
+    }
+    const left = secondsLeft(visible, dice.clockOffsetMs, nowTick)
+    if (left > 0 && left <= 3 && left !== countdownTickRef.current) {
+      countdownTickRef.current = left
+      playGameSound('tick')
+    }
+  }, [visible, nowTick, dice.clockOffsetMs])
+
   const join = useCallback(async () => {
     if (pick == null) return
     const ok = await dice.join(stake, pick)
-    if (ok) setDismissed(null)
+    if (ok) {
+      playGameSound('chip')
+      setDismissed(null)
+    }
   }, [dice, pick, stake])
 
   const leave = useCallback(async () => {
     const ok = await dice.leave()
-    if (ok) setDismissed(null)
+    if (ok) {
+      playGameSound('leave')
+      setDismissed(null)
+    }
   }, [dice])
 
   const start = useCallback(async () => {
-    await dice.start()
+    const ok = await dice.start()
+    if (ok) playGameSound('start')
   }, [dice])
 
   const newRound = useCallback(() => {
+    playGameSound('click')
     if (match) setDismissed(match.id)
   }, [match])
 
@@ -222,7 +256,10 @@ export function PocketDiceGame() {
                     values: [visible.die1, visible.die2] as unknown as PocketDiceValues,
                   }}
                   showResult={false}
-                  onSettled={() => setSettledId(visible.id)}
+                  onSettled={() => {
+                    setSettledId(visible.id)
+                    playGameSound(Number(visible.viewer.payoutPusd) > 0 ? 'win' : 'lose')
+                  }}
                   className="min-h-[340px] rounded-xl lg:min-h-[480px]"
                 />
               ) : (

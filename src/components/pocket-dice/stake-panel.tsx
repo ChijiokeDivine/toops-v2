@@ -1,6 +1,7 @@
 'use client'
 
 import { AuthTrigger } from '@/components/auth/auth-trigger'
+import { playGameSound } from '@/components/sound/game-sfx'
 import {
   POCKET_DICE_MAX_STAKE_PUSD,
   POCKET_DICE_MIN_STAKE_PUSD,
@@ -83,7 +84,10 @@ export function StakePanel({
                   <button
                     key={preset.label}
                     type="button"
-                    onClick={() => onStakeChange(formatPusdUnits(preset.amountPusd))}
+                    onClick={() => {
+                      playGameSound('click')
+                      onStakeChange(formatPusdUnits(preset.amountPusd))
+                    }}
                     className={`h-8 flex-1 rounded-lg text-[12px] font-semibold transition ${
                       active
                         ? 'bg-[#00fa7f]/15 text-[#00fa7f]'
@@ -104,7 +108,10 @@ export function StakePanel({
                 <button
                   key={number}
                   type="button"
-                  onClick={() => onPickChange(number)}
+                  onClick={() => {
+                    playGameSound('click')
+                    onPickChange(number)
+                  }}
                   className={`h-9 rounded-lg text-[13px] font-bold tabular-nums transition ${
                     pick === number
                       ? 'bg-[#00fa7f] text-[#03170d]'
