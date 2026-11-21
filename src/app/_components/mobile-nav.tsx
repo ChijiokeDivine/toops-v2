@@ -16,7 +16,7 @@ const ITEMS: Item[] = [
   // { label: 'Menu', Icon: MenuIcon },
   { label: 'Search', Icon: SearchIcon },
   { label: 'Multiplayer', Icon: CasinoIcon, href: '/multiplayer' },
-  { label: 'Dual', Icon: SportsIcon, href: '/originals/crash' },
+  { label: 'Dual', Icon: SportsIcon, href: '/dual' },
   { label: 'Chat', Icon: ChatIcon, action: 'chat' },
 ]
 

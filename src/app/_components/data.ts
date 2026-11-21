@@ -9,19 +9,18 @@ export type Category = {
   image?: string
 }
 
-export const CATEGORIES: Category[] = [
+/** `playing` is not stored here: the home page fills it from `getLiveCounts()`. */
+export const CATEGORIES: Array<Omit<Category, 'playing'>> = [
   {
     slug: 'multiplayer',
     title: 'Multiplayer',
-    playing: 1233,
     href: '/multiplayer',
     image: '/images/multiplayer.webp',
   },
   {
     slug: 'dual',
     title: 'Dual',
-    playing: 1660,
-    href: '/originals/crash',
+    href: '/dual',
     image: '/images/dual.webp',
   },
 ]
@@ -49,7 +48,7 @@ export const ORIGINALS: Game[] = [
     image: '/images/roullete.png',
   },
   {
-    slug: 'Rando',
+    slug: 'rando',
     name: 'Rando',
     gradient: 'linear-gradient(180deg,#2a0626 0%,#c0278f 45%,#ff63c8 100%)',
     image: '/images/rando1.webp',

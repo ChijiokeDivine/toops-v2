@@ -27,6 +27,13 @@
   color: var(--mn-text);
 }
 
+/* Inside the /dual lobby tab, where the page already provides the padding. */
+.mn-page--embed {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
 .mn-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 336px;

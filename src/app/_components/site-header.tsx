@@ -14,7 +14,7 @@ import { SiteBanner } from './site-banner'
 const NAV = [
   { label: 'Originals', href: '/originals' },
   { label: 'Multiplayer', href: '/multiplayer' },
-  { label: 'Dual', href: '/originals/crash' },
+  { label: 'Dual', href: '/dual' },
   { label: 'Mines', href: '/originals/mines' },
   { label: 'Rewards', href: '/rewards' },
   { label: 'Affiliates', href: '/affiliates' },
