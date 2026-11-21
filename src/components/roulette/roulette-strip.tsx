@@ -26,9 +26,11 @@ interface RouletteStripProps {
   target: Outcome | null
   spinId: number
   onSettled: () => void
+  /** Exact slot (0-14) the server landed on, so the stop is verifiable. */
+  targetIndex?: number | null
 }
 
-export function RouletteStrip({ phase, target, spinId, onSettled }: RouletteStripProps) {
+export function RouletteStrip({ phase, target, spinId, onSettled, targetIndex = null }: RouletteStripProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const widthRef = useRef(0)
   const slotRef = useRef(5) // pattern index currently under the marker
@@ -90,7 +92,10 @@ export function RouletteStrip({ phase, target, spinId, onSettled }: RouletteStri
   useEffect(() => {
     if (phase !== 'spinning' || !target) return
     const choices = SLOT_PATTERN.flatMap((o, i) => (o === target ? [i] : []))
-    const slot = choices[Math.floor(Math.random() * choices.length)]
+    const slot =
+      targetIndex != null && SLOT_PATTERN[targetIndex] === target
+        ? targetIndex
+        : choices[Math.floor(Math.random() * choices.length)]
     const jitter = (Math.random() - 0.5) * TILE * 0.7
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     spinMsRef.current = reduce ? 1200 : SPIN_MS
@@ -116,7 +121,7 @@ export function RouletteStrip({ phase, target, spinId, onSettled }: RouletteStri
       if (timer) clearTimeout(timer)
       stopSound?.()
     }
-  }, [phase, target, spinId, offsetFor])
+  }, [phase, target, targetIndex, spinId, offsetFor])
 
   return (
     <div ref={wrapRef} className="relative h-[132px] w-full overflow-hidden pt-3" aria-hidden="true">

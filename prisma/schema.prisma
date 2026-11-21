@@ -57,6 +57,7 @@ model User {
   dualMatchPlayers  DualMatchPlayer[]
   dualWins          DualMatch[]        @relation("DualWinner")
   pocketDicePlayers PocketDicePlayer[]
+  rouletteBets      RouletteBet[]
 
   minesTickets      MinesTicket[]
   minesMatchPlayers MinesMatchPlayer[]
@@ -579,5 +580,75 @@ model PocketDicePlayer {
   createdAt  DateTime @default(now())
 
   @@unique([matchId, userId])
+  @@index([userId, createdAt])
+}
+
+// ──────────────────────────────────────────────────────────
+// Roulette (shared-pool colour wheel)
+// ──────────────────────────────────────────────────────────
+
+enum RouletteOutcome {
+  RED
+  BLACK
+  GREEN
+}
+
+enum RouletteStatus {
+  /// Betting window is open; stakes are accepted.
+  BETTING
+  /// The wheel landed on a colour with backers and the pool was split.
+  SETTLED
+  /// The window closed with no bets at all; nothing to pay.
+  CANCELLED
+}
+
+/// One shared-pool roulette round. Everyone bets on a single colour, the wheel
+/// has 7 red, 7 black and 1 green slot, and the whole pool is split
+/// proportionally between the backers of the colour that lands.
+model RouletteRound {
+  id     String         @id @default(cuid())
+  status RouletteStatus @default(BETTING)
+
+  /// Sum of every stake placed on the round.
+  potPusd BigInt @default(0)
+
+  /// The colour that settled the round. Null while betting, and on a void round.
+  outcome RouletteOutcome?
+  /// Winning slot (0-14) on the 15-slot wheel, so the landing stays verifiable.
+  slot    Int?
+  /// Spins it took to land on a colour with backers; the earlier ones were void.
+  spins   Int             @default(0)
+
+  /// Published before the round; revealed after it settles.
+  serverSeed     String
+  serverSeedHash String
+
+  /// When betting closes and the wheel spins.
+  closesAt  DateTime
+  createdAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  bets RouletteBet[]
+
+  @@index([status, closesAt])
+  @@index([status, endedAt])
+}
+
+model RouletteBet {
+  id      String        @id @default(cuid())
+  roundId String
+  round   RouletteRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The one colour this player backed this round.
+  outcome    RouletteOutcome
+  /// Total staked, topped up when the player bets the same colour again.
+  amountPusd BigInt
+  /// Share of the pool; 0 when the colour did not win.
+  payoutPusd BigInt          @default(0)
+  createdAt  DateTime        @default(now())
+
+  @@unique([roundId, userId])
   @@index([userId, createdAt])
 }

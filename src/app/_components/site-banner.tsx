@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { HACKATHON } from '@/lib/hackathon'
@@ -48,6 +49,12 @@ export function SiteBanner() {
       </span>
 
       <span className="flex items-center gap-3 sm:ml-auto">
+        <Link
+          href={HACKATHON.deckUrl}
+          className="inline-flex items-center gap-1 font-semibold text-[var(--t-green)] transition-colors hover:text-white"
+        >
+          Widget Factory Deck
+        </Link>
         <a
           href={HACKATHON.baselineDemoUrl}
           target="_blank"

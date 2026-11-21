@@ -6,7 +6,7 @@ import { ArrowIcon, OriginalsBadgeIcon } from './icons'
 import { MediaSlot } from './media-slot'
 import type { Game } from './data'
 
-function GameCard({ game }: { game: Game }) {
+export function GameCard({ game }: { game: Game }) {
   return (
     <Link
       href={`/originals/${game.slug}`}

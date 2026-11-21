@@ -66,3 +66,15 @@ export const ORIGINALS: Game[] = [
     image: '/images/crash1.webp',
   },
 ]
+
+/** The Toops Originals that make up each home page category. */
+const CATEGORY_GAMES: Record<Category['slug'], string[]> = {
+  multiplayer: ['pocket-dice', 'roulette'],
+  dual: ['mines', 'crash'],
+}
+
+export function categoryGames(slug: Category['slug']): Game[] {
+  return CATEGORY_GAMES[slug].flatMap((gameSlug) =>
+    ORIGINALS.filter((game) => game.slug === gameSlug),
+  )
+}

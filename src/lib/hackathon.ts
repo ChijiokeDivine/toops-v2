@@ -13,6 +13,8 @@ export const HACKATHON = {
   baselineCodeUrl: 'https://github.com/ChijiokeDivine/toops/tree/nov-14-baseline',
   /** Repository where all work between November 14 and 22 lives. */
   repoUrl: 'https://github.com/ChijiokeDivine/toops-v2',
+  /** The project deck, played full-page from Google Slides on this site. */
+  deckUrl: '/slide',
   /**
    * Public payout address for EMBER2026 votes. This is not a secret, so the
    * value is baked in as a fallback to guarantee the banner always renders.

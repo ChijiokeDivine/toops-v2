@@ -1,8 +1,16 @@
-export type Outcome = 'red' | 'black' | 'green'
+import {
+  ROULETTE_OUTCOME_LABEL,
+  ROULETTE_SLOT_PATTERN,
+  type RouletteOutcome,
+} from '@/lib/roulette/rules'
+import { ROULETTE_MIN_STAKE_PUSD } from '@/lib/roulette/config'
+import { formatPusdUnits } from '@/lib/pusd'
+
+export type Outcome = RouletteOutcome
 export type Phase = 'betting' | 'spinning' | 'result'
 
-/** Minimum bet, in whole USD/PUSD. */
-export const MIN_BET = 0.2
+/** Minimum bet, in whole USD/PUSD. Mirrors the server's 0.20 PUSD floor. */
+export const MIN_BET = Number(formatPusdUnits(ROULETTE_MIN_STAKE_PUSD))
 
 export interface Bet {
   id: string
@@ -10,14 +18,7 @@ export interface Bet {
   amount: number
 }
 
-/** 15 slots: 1 green, 7 red, 7 black (alternating after the green). */
-export const SLOT_PATTERN: Outcome[] = [
-  'green',
-  ...Array.from({ length: 14 }, (_, i): Outcome => (i % 2 === 0 ? 'red' : 'black')),
-]
+/** The 15-slot wheel: 7 red, 7 black, 1 green. */
+export const SLOT_PATTERN: Outcome[] = ROULETTE_SLOT_PATTERN
 
-export const OUTCOME_LABEL: Record<Outcome, string> = {
-  red: 'Red',
-  black: 'Black',
-  green: 'Green',
-}
+export const OUTCOME_LABEL: Record<Outcome, string> = ROULETTE_OUTCOME_LABEL

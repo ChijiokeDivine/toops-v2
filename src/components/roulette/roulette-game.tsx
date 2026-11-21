@@ -1,28 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { openAuth } from '@/components/auth/auth-events'
+import { ROULETTE_BETTING_WINDOW_MS } from '@/lib/roulette/config'
+import { ROULETTE_OUTCOMES } from '@/lib/roulette/rules'
 import { BetPanel, money } from './bet-panel'
 import { OutcomeIcon, SoundOffIcon, SoundOnIcon } from './icons'
 import { RouletteStrip } from './roulette-strip'
 import * as sfx from './sfx'
-import { MIN_BET, OUTCOME_LABEL, SLOT_PATTERN, type Bet, type Outcome, type Phase } from './types'
-
-const BETTING_MS = 15000
-const RESULT_MS = 3500
-const START_BALANCE = 250
-const MIN_PLAYERS = 2
-const MAX_PLAYERS = 20
-
-const EMPTY_BETS: Record<Outcome, Bet[]> = { red: [], black: [], green: [] }
-
-// Placeholder data: replace with your API / socket feed.
-const INITIAL_HISTORY: Outcome[] = ['red', 'red', 'black', 'black', 'red', 'red', 'black', 'black', 'red', 'red']
-const LAST_100 = { red: 56, black: 42, green: 2 }
-
-// Demo players that bet during each betting window (set demo={false} once real data is wired in).
-const BOT_NAMES = ['Kairo', 'Mina', 'Sol', 'Tayo', 'Zed', 'Ivy', 'Obi', 'Nova', 'Rex', 'Lumi', 'Ada', 'Jax']
-const BOT_AMOUNTS = [1, 2, 5, 5, 10, 10, 25, 25, 50, 100, 250]
+import { MIN_BET, OUTCOME_LABEL, type Bet, type Outcome, type Phase } from './types'
+import { useRoulette } from './use-roulette'
 
 const MINI: Record<Outcome, string> = {
   red: 'bg-[#c6252f] text-[#6e1218]',
@@ -41,60 +29,34 @@ function MiniTile({ outcome, size = 16 }: { outcome: Outcome; size?: number }) {
   )
 }
 
-const sumOf = (list: Bet[]) => list.reduce((s, b) => s + b.amount, 0)
-
-const countBettors = (bets: Record<Outcome, Bet[]>) =>
-  bets.red.length + bets.black.length + bets.green.length
-
-function randomHex(bytes: number) {
-  const out = new Uint8Array(bytes)
-  crypto.getRandomValues(out)
-  return Array.from(out, (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-/**
- * Provably fair roll: HMAC-SHA256(serverSeed, `${clientSeed}:${nonce}`) mapped onto the 15-slot
- * wheel (7 red, 7 black, 1 green). The server seed is generated at the start of each round and the
- * nonce increments on every spin, including replays.
- */
-async function rollFair(serverSeed: string, clientSeed: string, nonce: number): Promise<Outcome> {
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey('raw', enc.encode(serverSeed), { name: 'HMAC', hash: 'SHA-256' }, false, [
-    'sign',
-  ])
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(`${clientSeed}:${nonce}`))
-  const bytes = new Uint8Array(sig)
-  const value = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0
-  return SLOT_PATTERN[value % SLOT_PATTERN.length]
-}
-
-function botOutcome(): Outcome {
-  const r = Math.random()
-  return r < 0.45 ? 'red' : r < 0.9 ? 'black' : 'green'
-}
-
-export function RouletteGame({ demo = true }: { demo?: boolean }) {
+export function RouletteGame() {
+  const table = useRoulette()
   const [phase, setPhase] = useState<Phase>('betting')
-  const [remaining, setRemaining] = useState(BETTING_MS)
   const [winner, setWinner] = useState<Outcome | null>(null)
-  const [history, setHistory] = useState<Outcome[]>(INITIAL_HISTORY)
+  const [remaining, setRemaining] = useState(0)
   const [amount, setAmount] = useState('')
-  const [balance, setBalance] = useState(START_BALANCE)
-  const [bets, setBets] = useState(EMPTY_BETS)
-  const [myPick, setMyPick] = useState<Outcome | null>(null)
-  const [payout, setPayout] = useState<number | null>(null)
-  const [muted, setMuted] = useState(false)
   const [started, setStarted] = useState(false)
-  const [roundKey, setRoundKey] = useState(0)
+  const [muted, setMuted] = useState(false)
   const [spinId, setSpinId] = useState(0)
 
-  const betsRef = useRef(bets)
-  betsRef.current = bets
-  const winnerRef = useRef<Outcome | null>(null)
-  const lastBeepRef = useRef(-1)
-  const serverSeedRef = useRef('')
-  const clientSeedRef = useRef('')
-  const nonceRef = useRef(0)
+  const animatedRef = useRef<string | null>(null)
+  const knownBettorsRef = useRef<Set<string>>(new Set())
+  const beepRef = useRef(-1)
+
+  const round = table.state?.round ?? null
+  const user = table.state?.user ?? null
+  const signedIn = table.state?.signedIn ?? false
+  const history = table.state?.history.outcomes ?? []
+  const counts = table.state?.history.counts ?? { red: 0, black: 0, green: 0 }
+
+  const roundId = round?.id ?? null
+  const roundStatus = round?.status ?? null
+  const closesAt = round?.closesAt ?? null
+  const serverNow = round?.serverNow ?? null
+
+  const balance = Number(user?.balancePusd ?? 0)
+  const myPick = round?.viewer.outcome ?? null
+  const payoutPusd = round?.viewer.payoutPusd ?? '0.00'
 
   // sound: restore the saved mute choice, unlock audio on the first click / key press
   useEffect(() => {
@@ -114,146 +76,165 @@ export function RouletteGame({ demo = true }: { demo?: boolean }) {
     sfx.setMuted(next)
   }
 
-  const addBet = useCallback((outcome: Outcome, id: string, name: string, value: number) => {
-    setBets((prev) => {
-      const exists = prev[outcome].some((b) => b.id === id)
-      const list = exists
-        ? prev[outcome].map((b) => (b.id === id ? { ...b, amount: b.amount + value } : b))
-        : [...prev[outcome], { id, name, amount: value }]
-      return { ...prev, [outcome]: list }
-    })
-  }, [])
-
-  // betting countdown -> spin
+  // the round on the server drives the phase: betting, spin, then the result pause
   useEffect(() => {
-    if (phase !== 'betting') return
-    if (!clientSeedRef.current) clientSeedRef.current = randomHex(16)
-    serverSeedRef.current = randomHex(32)
-    nonceRef.current = 0
-    const end = Date.now() + BETTING_MS
-    lastBeepRef.current = -1
-    setRemaining(BETTING_MS)
-    const id = setInterval(() => {
-      const left = Math.max(0, end - Date.now())
-      setRemaining(left)
-      const sec = Math.ceil(left / 1000)
-      if (sec !== lastBeepRef.current) {
-        lastBeepRef.current = sec
-        if (sec > 0 && sec <= 3) sfx.beep()
-      }
-      if (left === 0) {
-        clearInterval(id)
-        const all = betsRef.current
-        // a round needs at least two players; otherwise it is void and restarts
-        if (countBettors(all) < MIN_PLAYERS) {
-          const mine = [...all.red, ...all.black, ...all.green].filter((b) => b.id === 'me')
-          if (mine.length > 0) setBalance((b) => b + sumOf(mine))
-          setBets(EMPTY_BETS)
-          setMyPick(null)
-          setAmount('')
-          setRoundKey((k) => k + 1)
-          return
-        }
-        void rollFair(serverSeedRef.current, clientSeedRef.current, nonceRef.current).then((result) => {
-          winnerRef.current = result
-          setWinner(result)
-          setSpinId((n) => n + 1)
-          setPhase('spinning')
-        })
-      }
-    }, 50)
-    return () => clearInterval(id)
-  }, [phase, roundKey])
+    if (!round) return
 
-  // demo players join during the betting window
-  useEffect(() => {
-    if (!demo || phase !== 'betting') return
-    const count = 6 + Math.floor(Math.random() * 5)
-    const names = [...BOT_NAMES].sort(() => Math.random() - 0.5)
-    const timers = Array.from({ length: count }, (_, i) =>
-      setTimeout(() => {
-        if (countBettors(betsRef.current) >= MAX_PLAYERS) return
-        const amountPick = BOT_AMOUNTS[Math.floor(Math.random() * BOT_AMOUNTS.length)]
-        addBet(botOutcome(), `bot-${i}`, names[i], amountPick)
-        sfx.blip()
-      }, 600 + Math.random() * (BETTING_MS - 3500)),
-    )
-    return () => timers.forEach(clearTimeout)
-  }, [demo, phase, addBet])
-
-  // result pause -> next round
-  useEffect(() => {
-    if (phase !== 'result') return
-    const id = setTimeout(() => {
-      setBets(EMPTY_BETS)
-      setMyPick(null)
-      setWinner(null)
-      setPayout(null)
-      winnerRef.current = null
+    if (round.status === 'BETTING') {
+      animatedRef.current = null
       setPhase('betting')
-    }, RESULT_MS)
-    return () => clearTimeout(id)
-  }, [phase])
-
-  const handleSettled = useCallback(() => {
-    const w = winnerRef.current
-    if (!w) return
-    const all = betsRef.current
-    if (all[w].length === 0) {
-      // nobody backed this outcome: the round is void and replays with the same pool
-      const nonce = ++nonceRef.current
-      void rollFair(serverSeedRef.current, clientSeedRef.current, nonce).then((next) => {
-        winnerRef.current = next
-        setWinner(next)
-        setSpinId((n) => n + 1)
-      })
+      setWinner(null)
       return
     }
-    const mine = all[w].find((b) => b.id === 'me')
-    const hadBet = (Object.keys(all) as Outcome[]).some((o) => all[o].some((b) => b.id === 'me'))
-    if (mine) {
-      // pool is shared in proportion to each winner's stake
-      const pool = sumOf(all.red) + sumOf(all.black) + sumOf(all.green)
-      const won = (pool * mine.amount) / sumOf(all[w])
-      setPayout(won)
-      setBalance((b) => b + won)
+
+    if (round.status === 'CANCELLED') {
+      animatedRef.current = round.id
+      setPhase('result')
+      setWinner(null)
+      return
     }
-    sfx.result(w, mine ? 'win' : hadBet ? 'lose' : null)
-    setHistory((h) => [w, ...h].slice(0, 10))
-    setPhase('result')
-  }, [])
 
-  const startGame = () => {
-    if (started) return
-    setStarted(true)
-    setBets(EMPTY_BETS)
-    setMyPick(null)
-    setWinner(null)
-    setPayout(null)
-    winnerRef.current = null
-    setPhase('betting')
-    setRoundKey((k) => k + 1)
-    sfx.chip()
-  }
+    if (animatedRef.current === round.id) return
+    animatedRef.current = round.id
+    setWinner(round.outcome)
+    setSpinId((n) => n + 1)
+    setPhase('spinning')
+  }, [round])
 
-  const placeBet = (outcome: Outcome) => {
-    if (!started) return
-    const value = Number.parseFloat(amount) || 0
-    if (phase !== 'betting' || value < MIN_BET || value > balance) return
-    if (myPick && myPick !== outcome) return // one outcome per round
-    if (!myPick && countBettors(betsRef.current) >= MAX_PLAYERS) return
-    addBet(outcome, 'me', 'You', value)
-    setMyPick(outcome)
-    setBalance((b) => b - value)
-    setAmount('')
-    sfx.chip()
+  // countdown, measured against the server's clock so a skewed device still agrees
+  useEffect(() => {
+    if (roundStatus !== 'BETTING' || !closesAt || !serverNow) {
+      setRemaining(0)
+      return
+    }
+    const closeMs = new Date(closesAt).getTime()
+    const offsetMs = new Date(serverNow).getTime() - Date.now()
+    const tick = () => setRemaining(Math.max(0, closeMs - (Date.now() + offsetMs)))
+    tick()
+    const id = window.setInterval(tick, 80)
+    return () => window.clearInterval(id)
+  }, [roundStatus, closesAt, serverNow])
+
+  useEffect(() => {
+    beepRef.current = -1
+  }, [roundId])
+
+  // countdown ticks through the last three seconds before the wheel rolls
+  useEffect(() => {
+    if (phase !== 'betting') return
+    const seconds = Math.ceil(remaining / 1000)
+    if (seconds > 0 && seconds <= 3 && seconds !== beepRef.current) {
+      beepRef.current = seconds
+      sfx.beep()
+    }
+  }, [phase, remaining])
+
+  // a quiet blip as other players put chips on the table
+  useEffect(() => {
+    if (!round) return
+    const seen = knownBettorsRef.current
+    if (round.status !== 'BETTING') {
+      seen.clear()
+      return
+    }
+    for (const outcome of ROULETTE_OUTCOMES) {
+      for (const bettor of round.bettors[outcome]) {
+        if (seen.has(bettor.userId)) continue
+        seen.add(bettor.userId)
+        if (!bettor.isSelf) sfx.blip()
+      }
+    }
+  }, [round])
+
+  // a staked round keeps the table open across a refresh
+  useEffect(() => {
+    if (myPick) setStarted(true)
+  }, [myPick])
+
+  const handleSettled = useCallback(() => {
+    setPhase((current) => (current === 'spinning' ? 'result' : current))
+    if (!winner) return
+    const won = Number(payoutPusd) > 0
+    sfx.result(winner, myPick ? (won ? 'win' : 'lose') : null)
+  }, [winner, payoutPusd, myPick])
+
+  const startGame = useCallback(() => {
+    if (started || table.busy) return
+    if (!signedIn) {
+      openAuth({ view: 'telegram' })
+      return
+    }
+    void (async () => {
+      const ok = await table.join()
+      if (ok) {
+        setStarted(true)
+        sfx.chip()
+      }
+    })()
+  }, [started, signedIn, table])
+
+  const placeBet = useCallback(
+    (outcome: Outcome) => {
+      if (!started || table.busy || !round) return
+      const value = Number.parseFloat(amount) || 0
+      if (round.status !== 'BETTING' || value < MIN_BET || value > balance) return
+      if (myPick && myPick !== outcome) return // one colour per round
+      void (async () => {
+        const ok = await table.bet(outcome, amount)
+        if (ok) {
+          setAmount('')
+          sfx.chip()
+        }
+      })()
+    },
+    [started, table, round, amount, balance, myPick],
+  )
+
+  const panelBets = useMemo<Record<Outcome, Bet[]>>(() => {
+    const next: Record<Outcome, Bet[]> = { red: [], black: [], green: [] }
+    if (!round) return next
+    for (const outcome of ROULETTE_OUTCOMES) {
+      next[outcome] = round.bettors[outcome].map((bettor) => ({
+        id: bettor.userId,
+        name: bettor.isSelf ? 'You' : bettor.displayName,
+        amount: Number(bettor.amountPusd),
+      }))
+    }
+    return next
+  }, [round])
+
+  if (table.loading && !round) {
+    return (
+      <section className="mx-auto grid min-h-[420px] w-full place-items-center overflow-hidden rounded-2xl border border-[#161d26] bg-[#0b0f14]">
+        <p className="text-[13px] font-semibold text-[#8993a3]">Loading the table…</p>
+      </section>
+    )
   }
 
   const label =
-    phase === 'betting' ? 'STARTING IN' : phase === 'spinning' ? 'ROLLING' : `${OUTCOME_LABEL[winner ?? 'red'].toUpperCase()} WINS`
+    phase === 'betting'
+      ? 'STARTING IN'
+      : phase === 'spinning'
+        ? 'ROLLING'
+        : winner
+          ? `${OUTCOME_LABEL[winner].toUpperCase()} WINS`
+          : 'NO BETS — NEXT ROUND'
 
   return (
     <section className="mx-auto w-full overflow-hidden rounded-2xl border border-[#161d26] bg-[#0b0f14] pb-10">
+      {table.notice ? (
+        <div
+          role="status"
+          className={`mx-5 mt-5 rounded-lg border px-3 py-2 text-[12px] font-medium sm:mx-9 ${
+            table.notice.tone === 'error'
+              ? 'border-[#c9343d]/35 bg-[#c9343d]/10 text-[#ffb4b8]'
+              : 'border-white/[0.08] bg-white/[0.04] text-white/70'
+          }`}
+        >
+          {table.notice.text}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 pt-7 text-[12px] font-semibold text-[#8993a3] sm:px-9">
         <div className="flex items-center gap-3">
           <span>LAST 10</span>
@@ -270,7 +251,7 @@ export function RouletteGame({ demo = true }: { demo?: boolean }) {
           {(['red', 'black', 'green'] as const).map((o) => (
             <span key={o} className="flex items-center gap-1.5 text-[13px] font-bold text-white">
               <MiniTile outcome={o} size={18} />
-              {LAST_100[o]}
+              {counts[o]}
             </span>
           ))}
           <button
@@ -286,7 +267,13 @@ export function RouletteGame({ demo = true }: { demo?: boolean }) {
       </div>
 
       <div className="mt-6">
-        <RouletteStrip phase={phase} target={winner} spinId={spinId} onSettled={handleSettled} />
+        <RouletteStrip
+          phase={phase}
+          target={winner}
+          spinId={spinId}
+          onSettled={handleSettled}
+          targetIndex={winner ? round?.slot ?? null : null}
+        />
       </div>
 
       <div role="status" className="mx-auto mt-5 w-full max-w-[582px] px-4 text-center">
@@ -295,15 +282,21 @@ export function RouletteGame({ demo = true }: { demo?: boolean }) {
           {phase === 'betting' && (
             <span className="font-bold tabular-nums text-white">{(remaining / 1000).toFixed(2)}</span>
           )}
+          {phase === 'result' && (round?.voidSpins ?? 0) > 0 ? (
+            <span className="text-[#7b8594]"> · respun {round?.voidSpins}×</span>
+          ) : null}
         </p>
         <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-[#1a212a]">
           <div
             className="h-full rounded-full bg-[#1fd36b]"
-            style={{ width: phase === 'betting' ? `${(remaining / BETTING_MS) * 100}%` : '0%' }}
+            style={{
+              width:
+                phase === 'betting' ? `${(remaining / ROULETTE_BETTING_WINDOW_MS) * 100}%` : '0%',
+            }}
           />
         </div>
-        {payout !== null && (
-          <p className="mt-2 text-[13px] font-bold text-[#1fd36b]">You won {money(payout)}</p>
+        {Number(payoutPusd) > 0 && phase === 'result' && (
+          <p className="mt-2 text-[13px] font-bold text-[#1fd36b]">You won {money(Number(payoutPusd))}</p>
         )}
       </div>
 
@@ -315,7 +308,7 @@ export function RouletteGame({ demo = true }: { demo?: boolean }) {
           phase={phase}
           winner={winner}
           myPick={myPick}
-          bets={bets}
+          bets={panelBets}
           started={started}
           onStart={startGame}
           onBet={placeBet}
