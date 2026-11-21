@@ -1,0 +1,109 @@
+pragma cashscript ^0.14.0;
+
+/**
+ * MatchEscrow
+ * ===========
+ * Economic finality layer for a single Mines / Dual match in toops.
+ *
+ * When two players lock a stake, the platform constructs a transaction that
+ * moves the full pot into this contract. The off-chain game (Redis + Postgres)
+ * continues at full speed. Final settlement is enforced here.
+ *
+ * Guarantees:
+ * 1. The serverSeed must match the pre-published hash (provably fair becomes real)
+ * 2. The platform fee is forced to the PlatformTreasury – it cannot be skipped
+ * 3. Winner receives exactly (pot - fee)
+ * 4. After a timeout either player can force a full refund of both stakes
+ *
+ * Constructor parameters are baked into the locking bytecode at match creation.
+ *
+ * Instantiation example:
+ *   MatchEscrow(
+ *     player1Pkh,
+ *     player2Pkh,
+ *     stake,                 // per player, in the unit you chose (sats or PUSD base units)
+ *     100,                   // feeBps = 1%
+ *     serverSeedHash,        // sha256(serverSeed) published at match start
+ *     timeoutBlock,          // absolute block height
+ *     treasuryLockingBytecode
+ *   )
+ */
+contract MatchEscrow(
+    // Players (P2PKH hashes)
+    bytes20 player1Pkh,
+    bytes20 player2Pkh,
+
+    // Economics
+    int stake,                  // amount each player locked
+    int feeBps,                 // basis points (100 = 1%)
+    bytes32 serverSeedHash,     // commitment published before the match
+
+    // Safety
+    int timeoutBlock,           // absolute block height after which refund is allowed
+
+    // Fee destination (locking bytecode of the PlatformTreasury instance)
+    bytes treasuryLockingBytecode
+) {
+    /**
+     * Normal settlement path.
+     * Can be called by anyone once the serverSeed is known.
+     * The contract itself verifies the seed and the economic split.
+     */
+    function settle(
+        bytes serverSeed,
+        int winnerSeat              // 0 = player1, 1 = player2
+    ) {
+        // 1. Verify the committed seed
+        require(sha256(serverSeed) == serverSeedHash);
+
+        // 2. Winner must be one of the two seats
+        require(winnerSeat == 0 || winnerSeat == 1);
+
+        int pot    = stake * 2;
+        int fee    = (pot * feeBps) / 10000;
+        int payout = pot - fee;
+
+        // 3. Force the exact economic outputs depending on the winner
+        if (winnerSeat == 0) {
+            // Player 1 wins
+            bytes25 winnerLock = new LockingBytecodeP2PKH(player1Pkh);
+            require(tx.outputs[0].lockingBytecode == winnerLock);
+            require(tx.outputs[0].value == payout);
+        } else {
+            // Player 2 wins
+            bytes25 winnerLock = new LockingBytecodeP2PKH(player2Pkh);
+            require(tx.outputs[0].lockingBytecode == winnerLock);
+            require(tx.outputs[0].value == payout);
+        }
+
+        // Fee always goes to the treasury
+        require(tx.outputs[1].lockingBytecode == treasuryLockingBytecode);
+        require(tx.outputs[1].value == fee);
+
+        // Allow a possible third output for change / dust
+        require(tx.outputs.length >= 2);
+        require(tx.outputs.length <= 3);
+    }
+
+    /**
+     * Timeout refund path.
+     * After `timeoutBlock` either player (or anyone) can force both stakes
+     * to be returned. This protects users if the platform disappears.
+     */
+    function refund() {
+        require(tx.time >= timeoutBlock);
+
+        bytes25 p1Lock = new LockingBytecodeP2PKH(player1Pkh);
+        bytes25 p2Lock = new LockingBytecodeP2PKH(player2Pkh);
+
+        // Force equal refunds to both original players
+        require(tx.outputs[0].lockingBytecode == p1Lock);
+        require(tx.outputs[0].value == stake);
+
+        require(tx.outputs[1].lockingBytecode == p2Lock);
+        require(tx.outputs[1].value == stake);
+
+        require(tx.outputs.length >= 2);
+        require(tx.outputs.length <= 3);
+    }
+}

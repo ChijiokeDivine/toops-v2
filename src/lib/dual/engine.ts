@@ -2,8 +2,22 @@ import 'server-only'
 
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { formatPusdUnits } from '@/lib/pusd'
+import { formatPusdUnits, pusdUnitsToSats } from '@/lib/pusd'
+import { getPusdRate } from '@/lib/pusd-server'
 import {
+  createMatchEscrow,
+  fundMatchEscrow,
+  getEscrowTimeoutBlock,
+  getPlatformTreasuryLockingBytecode,
+  instantiateStoredMatchEscrow,
+  pkhFromAddress,
+  refundMatchEscrow,
+  settleMatchEscrow,
+  storedParams,
+  type StoredMatchEscrowParams,
+} from '@/lib/contracts'
+import {
+  DUAL_FEE_BPS,
   DUAL_COUNTDOWN_MS,
   DUAL_DISCONNECT_GRACE_MS,
   DUAL_INTERMISSION_MS,
@@ -384,7 +398,86 @@ async function createMatchWithinTx(
     data: { activeMatchId: match.id },
   })
 
+  await provisionMatchEscrow(tx, match.id, entries.map((entry) => entry.userId), stakePusd)
+
   return match
+}
+
+async function provisionMatchEscrow(
+  tx: Tx,
+  matchId: string,
+  userIds: string[],
+  stakePusd: bigint,
+): Promise<void> {
+  try {
+    const wallets = await tx.platformWallet.findMany({ where: { userId: { in: userIds } } })
+    if (wallets.length !== 2) return
+    const player1Wallet = wallets.find((wallet) => wallet.userId === userIds[0])
+    const player2Wallet = wallets.find((wallet) => wallet.userId === userIds[1])
+    if (!player1Wallet || !player2Wallet) return
+
+    const [rate, timeoutBlock, treasuryLockingBytecode] = await Promise.all([
+      getPusdRate(),
+      getEscrowTimeoutBlock(),
+      Promise.resolve(getPlatformTreasuryLockingBytecode()),
+    ])
+    const stakeSats = pusdUnitsToSats(stakePusd, rate.satsPerPusd)
+    if (stakeSats <= 0n) return
+
+    const match = await tx.dualMatch.findUnique({
+      where: { id: matchId },
+      select: { serverSeedHash: true },
+    })
+    if (!match) return
+
+    const contract = createMatchEscrow({
+      player1Pkh: pkhFromAddress(player1Wallet.address),
+      player2Pkh: pkhFromAddress(player2Wallet.address),
+      stake: stakeSats,
+      feeBps: DUAL_FEE_BPS,
+      serverSeedHash: match.serverSeedHash,
+      timeoutBlock,
+      treasuryLockingBytecode,
+    })
+    const { outpoint } = await fundMatchEscrow({
+      contract,
+      player1: {
+        address: player1Wallet.address,
+        derivationIndex: player1Wallet.derivationIndex,
+      },
+      player2: {
+        address: player2Wallet.address,
+        derivationIndex: player2Wallet.derivationIndex,
+      },
+      stakeSats,
+    })
+
+    await tx.dualMatch.update({
+      where: { id: matchId },
+      data: {
+        escrowOutpoint: outpoint,
+        escrowParams: storedParams(
+          contract,
+          {
+            player1Pkh: pkhFromAddress(player1Wallet.address),
+            player2Pkh: pkhFromAddress(player2Wallet.address),
+            stake: stakeSats,
+            feeBps: DUAL_FEE_BPS,
+            serverSeedHash: match.serverSeedHash,
+            timeoutBlock,
+            treasuryLockingBytecode,
+          },
+          {
+            player1Address: player1Wallet.address,
+            player2Address: player2Wallet.address,
+          },
+        ) as unknown as Prisma.InputJsonValue,
+      },
+    })
+  } catch (error) {
+    // The off-chain match must not be blocked by a chain or wallet failure.
+    console.error('[dual] escrow provisioning failed', matchId, error)
+  }
 }
 
 // ── state / views ───────────────────────────────────────────
@@ -1086,9 +1179,92 @@ async function settleWithinTx(
     },
   })
 
+  await settleEscrowOnChain(tx, match, winner)
+
   // Settled matches stay pinned on User.activeMatchId so the result/rematch
   // screen survives a refresh. `leaveMatch` or joining a new queue clears it.
   return true
+}
+
+async function settleEscrowOnChain(
+  tx: Tx,
+  match: MatchWithPlayers,
+  winner: PlayerWithUser,
+): Promise<void> {
+  if (!match.escrowOutpoint || !match.escrowParams) return
+
+  try {
+    const params = match.escrowParams as unknown as StoredMatchEscrowParams
+    if (match.serverSeedHash !== params.serverSeedHash) return
+    const wallet = await tx.platformWallet.findUnique({ where: { userId: winner.userId } })
+    if (!wallet) return
+
+    const stakeSats = BigInt(params.stakeSats)
+    const potSats = stakeSats * 2n
+    const feeSats = (potSats * BigInt(params.feeBps)) / 10_000n
+
+    await settleMatchEscrow({
+      contract: instantiateStoredMatchEscrow(params),
+      outpoint: match.escrowOutpoint,
+      serverSeed: match.serverSeed,
+      winnerSeat: winner.seat,
+      winnerAddress: wallet.address,
+      treasuryLockingBytecode: params.treasuryLockingBytecode,
+      feeSats,
+      payoutSats: potSats - feeSats,
+      feeSigner: { address: wallet.address, derivationIndex: wallet.derivationIndex },
+    })
+  } catch (error) {
+    console.error('[dual] escrow settlement failed', match.id, error)
+  }
+}
+
+/** Refunds expired, never-settled escrows. Safe to call repeatedly. */
+export async function refundExpiredEscrows(): Promise<number> {
+  const matches = await prisma.dualMatch.findMany({
+    where: { escrowOutpoint: { not: null }, status: 'CANCELLED' },
+    select: { id: true, escrowOutpoint: true, escrowParams: true },
+    take: 25,
+  })
+
+  let refunded = 0
+  for (const match of matches) {
+    if (!match.escrowOutpoint || !match.escrowParams) continue
+    try {
+      const params = match.escrowParams as unknown as StoredMatchEscrowParams
+      const wallets = await prisma.platformWallet.findMany({
+        where: {
+          userId: {
+            in: (
+              await prisma.dualMatchPlayer.findMany({
+                where: { matchId: match.id },
+                select: { userId: true },
+              })
+            ).map((player) => player.userId),
+          },
+        },
+      })
+      const feeWallet = wallets[0]
+      if (!feeWallet) continue
+
+      await refundMatchEscrow({
+        contract: instantiateStoredMatchEscrow(params),
+        outpoint: match.escrowOutpoint,
+        player1Address: params.player1Address,
+        player2Address: params.player2Address,
+        stakeSats: BigInt(params.stakeSats),
+        timeoutBlock: params.timeoutBlock,
+        feeSigner: {
+          address: feeWallet.address,
+          derivationIndex: feeWallet.derivationIndex,
+        },
+      })
+      refunded += 1
+    } catch (error) {
+      console.error('[dual] escrow refund failed', match.id, error)
+    }
+  }
+  return refunded
 }
 
 async function cancelWithinTx(

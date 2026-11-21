@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { advanceOpenMatches } from '@/lib/dual/engine'
+import { advanceOpenMatches, refundExpiredEscrows } from '@/lib/dual/engine'
+import { refundExpiredEscrows as refundMinesEscrows } from '@/lib/mines/engine'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -27,7 +28,9 @@ export async function GET(request: Request) {
 
   try {
     const advanced = await advanceOpenMatches()
-    return NextResponse.json({ ok: true, advanced })
+    const escrowRefunds = await refundExpiredEscrows()
+    const minesEscrowRefunds = await refundMinesEscrows()
+    return NextResponse.json({ ok: true, advanced, escrowRefunds, minesEscrowRefunds })
   } catch (error) {
     console.error('dual cron failed', error)
     return NextResponse.json({ error: 'Dual maintenance failed.' }, { status: 500 })

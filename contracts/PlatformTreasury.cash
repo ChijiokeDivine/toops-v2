@@ -1,0 +1,41 @@
+pragma cashscript ^0.14.0;
+
+/**
+ * PlatformTreasury
+ * ================
+ * Holds all platform fees collected from MatchEscrow settlements.
+ *
+ * Design goals for toops:
+ * - Single destination for every fee (no more scattered HD addresses)
+ * - Only the platform admin key can spend
+ * - Explicit and conservative output rules
+ * - Easy to harden later (multi-sig, cold destination, daily limits via NFT state)
+ *
+ * Instantiation:
+ *   PlatformTreasury(adminPubkey)
+ */
+contract PlatformTreasury(
+    pubkey admin
+) {
+    /**
+     * Withdraw any amount of BCH (or tokens when the UTXO carries them)
+     * to an arbitrary destination controlled by the admin.
+     *
+     * The admin is expected to construct a clean transaction.
+     * The contract only enforces the signature.
+     */
+    function withdraw(sig adminSig) {
+        require(checkSig(adminSig, admin));
+    }
+
+    /**
+     * Optional stricter variant – force the first output to a known cold address.
+     * Uncomment and use this if you want an extra safety rail.
+     *
+     * function withdrawToCold(sig adminSig, bytes20 coldPkh) {
+     *     require(checkSig(adminSig, admin));
+     *     bytes25 coldLock = new LockingBytecodeP2PKH(coldPkh);
+     *     require(tx.outputs[0].lockingBytecode == coldLock);
+     * }
+     */
+}

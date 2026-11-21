@@ -306,6 +306,10 @@ model DualMatch {
   /// Aggregate integrity marker; flipped to false if verification fails.
   integrityOk Boolean @default(true)
 
+  /// On-chain MatchEscrow funding (`txid:vout`) and constructor parameters.
+  escrowOutpoint String?
+  escrowParams   Json?
+
   rematchOfId       String?
   rematchCreatedAt  DateTime?
   rematchDeclinedAt DateTime?
@@ -435,6 +439,10 @@ model MinesMatch {
   endedAt         DateTime?
 
   cancelReason String?
+
+  /// On-chain MatchEscrow funding (`txid:vout`) and constructor parameters.
+  escrowOutpoint String?
+  escrowParams   Json?
 
   players   MinesMatchPlayer[]
   createdAt DateTime           @default(now())

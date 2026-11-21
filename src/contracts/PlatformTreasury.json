@@ -1,0 +1,34 @@
+{
+  "contractName": "PlatformTreasury",
+  "constructorInputs": [
+    { "name": "admin", "type": "pubkey" }
+  ],
+  "abi": [
+    {
+      "name": "withdraw",
+      "inputs": [
+        { "name": "adminSig", "type": "sig" }
+      ]
+    }
+  ],
+  "bytecode": "OP_CHECKSIG",
+  "source": "pragma cashscript ^0.14.0;\r\n\r\n/**\r\n * PlatformTreasury\r\n * ================\r\n * Holds all platform fees collected from MatchEscrow settlements.\r\n *\r\n * Design goals for toops:\r\n * - Single destination for every fee (no more scattered HD addresses)\r\n * - Only the platform admin key can spend\r\n * - Explicit and conservative output rules\r\n * - Easy to harden later (multi-sig, cold destination, daily limits via NFT state)\r\n *\r\n * Instantiation:\r\n *   PlatformTreasury(adminPubkey)\r\n */\r\ncontract PlatformTreasury(\r\n    pubkey admin\r\n) {\r\n    /**\r\n     * Withdraw any amount of BCH (or tokens when the UTXO carries them)\r\n     * to an arbitrary destination controlled by the admin.\r\n     *\r\n     * The admin is expected to construct a clean transaction.\r\n     * The contract only enforces the signature.\r\n     */\r\n    function withdraw(sig adminSig) {\r\n        require(checkSig(adminSig, admin));\r\n    }\r\n\r\n    /**\r\n     * Optional stricter variant – force the first output to a known cold address.\r\n     * Uncomment and use this if you want an extra safety rail.\r\n     *\r\n     * function withdrawToCold(sig adminSig, bytes20 coldPkh) {\r\n     *     require(checkSig(adminSig, admin));\r\n     *     bytes25 coldLock = new LockingBytecodeP2PKH(coldPkh);\r\n     *     require(tx.outputs[0].lockingBytecode == coldLock);\r\n     * }\r\n     */\r\n}",
+  "fingerprint": "9bc6bf500d23c135ed2add8ccee8d1c83fc9170b3bc736e25fe62e6bcab2fad5",
+  "debug": {
+    "bytecode": "ac",
+    "sourceMap": "28:8:28:43:1",
+    "logs": [],
+    "requires": [
+      { "ip": 2, "line": 28 }
+    ]
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.14.0",
+    "options": {
+      "enforceFunctionParameterTypes": true,
+      "enforceLocktimeGuard": true
+    }
+  },
+  "updatedAt": "2026-11-21T18:06:18.274Z"
+}

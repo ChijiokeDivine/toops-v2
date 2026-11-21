@@ -1,0 +1,59 @@
+{
+  "contractName": "MatchEscrow",
+  "constructorInputs": [
+    { "name": "player1Pkh", "type": "bytes20" },
+    { "name": "player2Pkh", "type": "bytes20" },
+    { "name": "stake", "type": "int" },
+    { "name": "feeBps", "type": "int" },
+    { "name": "serverSeedHash", "type": "bytes32" },
+    { "name": "timeoutBlock", "type": "int" },
+    { "name": "treasuryLockingBytecode", "type": "bytes" }
+  ],
+  "abi": [
+    {
+      "name": "settle",
+      "inputs": [
+        { "name": "serverSeed", "type": "bytes" },
+        { "name": "winnerSeat", "type": "int" }
+      ]
+    },
+    { "name": "refund", "inputs": [] }
+  ],
+  "bytecode": "OP_7 OP_PICK OP_0 OP_NUMEQUAL OP_IF OP_8 OP_ROLL OP_SHA256 OP_5 OP_ROLL OP_EQUALVERIFY OP_7 OP_PICK OP_0 OP_NUMEQUAL OP_8 OP_PICK OP_1 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_ROT OP_2 OP_MUL OP_DUP OP_4 OP_ROLL OP_MUL 1027 OP_DIV OP_TUCK OP_SUB OP_7 OP_ROLL OP_0 OP_NUMEQUAL OP_IF 76a914 OP_3 OP_PICK OP_CAT 88ac OP_CAT OP_0 OP_OUTPUTBYTECODE OP_OVER OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_2 OP_PICK OP_NUMEQUALVERIFY OP_DROP OP_ELSE 76a914 OP_4 OP_PICK OP_CAT 88ac OP_CAT OP_0 OP_OUTPUTBYTECODE OP_OVER OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_2 OP_PICK OP_NUMEQUALVERIFY OP_DROP OP_ENDIF OP_1 OP_OUTPUTBYTECODE OP_6 OP_ROLL OP_EQUALVERIFY OP_1 OP_OUTPUTVALUE OP_ROT OP_NUMEQUALVERIFY OP_TXOUTPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXOUTPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_2DROP OP_2DROP OP_DROP OP_1 OP_ELSE OP_7 OP_ROLL OP_1 OP_NUMEQUALVERIFY OP_5 OP_ROLL OP_CHECKLOCKTIMEVERIFY OP_DROP 76a914 OP_SWAP OP_CAT 88ac OP_CAT 76a914 OP_ROT OP_CAT 88ac OP_CAT OP_0 OP_OUTPUTBYTECODE OP_ROT OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_2 OP_PICK OP_NUMEQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_EQUALVERIFY OP_1 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_TXOUTPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXOUTPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_NIP OP_NIP OP_NIP OP_ENDIF",
+  "source": "pragma cashscript ^0.14.0;\r\n\r\n/**\r\n * MatchEscrow\r\n * ===========\r\n * Economic finality layer for a single Mines / Dual match in toops.\r\n *\r\n * When two players lock a stake, the platform constructs a transaction that\r\n * moves the full pot into this contract. The off-chain game (Redis + Postgres)\r\n * continues at full speed. Final settlement is enforced here.\r\n *\r\n * Guarantees:\r\n * 1. The serverSeed must match the pre-published hash (provably fair becomes real)\r\n * 2. The platform fee is forced to the PlatformTreasury – it cannot be skipped\r\n * 3. Winner receives exactly (pot - fee)\r\n * 4. After a timeout either player can force a full refund of both stakes\r\n *\r\n * Constructor parameters are baked into the locking bytecode at match creation.\r\n *\r\n * Instantiation example:\r\n *   MatchEscrow(\r\n *     player1Pkh,\r\n *     player2Pkh,\r\n *     stake,                 // per player, in the unit you chose (sats or PUSD base units)\r\n *     100,                   // feeBps = 1%\r\n *     serverSeedHash,        // sha256(serverSeed) published at match start\r\n *     timeoutBlock,          // absolute block height\r\n *     treasuryLockingBytecode\r\n *   )\r\n */\r\ncontract MatchEscrow(\r\n    // Players (P2PKH hashes)\r\n    bytes20 player1Pkh,\r\n    bytes20 player2Pkh,\r\n\r\n    // Economics\r\n    int stake,                  // amount each player locked\r\n    int feeBps,                 // basis points (100 = 1%)\r\n    bytes32 serverSeedHash,     // commitment published before the match\r\n\r\n    // Safety\r\n    int timeoutBlock,           // absolute block height after which refund is allowed\r\n\r\n    // Fee destination (locking bytecode of the PlatformTreasury instance)\r\n    bytes treasuryLockingBytecode\r\n) {\r\n    /**\r\n     * Normal settlement path.\r\n     * Can be called by anyone once the serverSeed is known.\r\n     * The contract itself verifies the seed and the economic split.\r\n     */\r\n    function settle(\r\n        bytes serverSeed,\r\n        int winnerSeat              // 0 = player1, 1 = player2\r\n    ) {\r\n        // 1. Verify the committed seed\r\n        require(sha256(serverSeed) == serverSeedHash);\r\n\r\n        // 2. Winner must be one of the two seats\r\n        require(winnerSeat == 0 || winnerSeat == 1);\r\n\r\n        int pot    = stake * 2;\r\n        int fee    = (pot * feeBps) / 10000;\r\n        int payout = pot - fee;\r\n\r\n        // 3. Force the exact economic outputs depending on the winner\r\n        if (winnerSeat == 0) {\r\n            // Player 1 wins\r\n            bytes25 winnerLock = new LockingBytecodeP2PKH(player1Pkh);\r\n            require(tx.outputs[0].lockingBytecode == winnerLock);\r\n            require(tx.outputs[0].value == payout);\r\n        } else {\r\n            // Player 2 wins\r\n            bytes25 winnerLock = new LockingBytecodeP2PKH(player2Pkh);\r\n            require(tx.outputs[0].lockingBytecode == winnerLock);\r\n            require(tx.outputs[0].value == payout);\r\n        }\r\n\r\n        // Fee always goes to the treasury\r\n        require(tx.outputs[1].lockingBytecode == treasuryLockingBytecode);\r\n        require(tx.outputs[1].value == fee);\r\n\r\n        // Allow a possible third output for change / dust\r\n        require(tx.outputs.length >= 2);\r\n        require(tx.outputs.length <= 3);\r\n    }\r\n\r\n    /**\r\n     * Timeout refund path.\r\n     * After `timeoutBlock` either player (or anyone) can force both stakes\r\n     * to be returned. This protects users if the platform disappears.\r\n     */\r\n    function refund() {\r\n        require(tx.time >= timeoutBlock);\r\n\r\n        bytes25 p1Lock = new LockingBytecodeP2PKH(player1Pkh);\r\n        bytes25 p2Lock = new LockingBytecodeP2PKH(player2Pkh);\r\n\r\n        // Force equal refunds to both original players\r\n        require(tx.outputs[0].lockingBytecode == p1Lock);\r\n        require(tx.outputs[0].value == stake);\r\n\r\n        require(tx.outputs[1].lockingBytecode == p2Lock);\r\n        require(tx.outputs[1].value == stake);\r\n\r\n        require(tx.outputs.length >= 2);\r\n        require(tx.outputs.length <= 3);\r\n    }\r\n}",
+  "fingerprint": "9a694a43532645e21552ddfcee8126b2efbd64ec52c4a3c3d977fb731e1bdd56",
+  "debug": {
+    "bytecode": "5779009c63587aa8557a885779009c5879519c9b697b529576547a95021027967d94577a009c630376a91453797e0288ac7e00cd788800cc52799d75670376a91454797e0288ac7e00cd788800cc52799d756851cd567a8851cc7b9dc452a269c453a1696d6d755167577a519d557ab1750376a9147c7e0288ac7e0376a9147b7e0288ac7e00cd7b8800cc52799d51cd8851cc9dc452a269c453a177777768",
+    "sourceMap": "52:4:86:5;;;;;57:23:57:33;;:16::34:1;:38::52:0;;:8::54:1;60:16:60:26:0;;:30::31;:16:::1;:35::45:0;;:49::50;:35:::1;:16;:8::52;62:21:62:26:0;:29::30;:21:::1;63:22:63:25:0;:28::34;;:22:::1;:38::43:0;:21:::1;64::64:30:0;::::1;67:12:67:22:0;;:26::27;:12:::1;:29:72:9:0;69:33:69:69;:58::68;;:33::69:1;;;70:31:70:32:0;:20::49:1;:53::63:0;:12::65:1;71:31:71:32:0;:20::39:1;:43::49:0;;:12::51:1;67:29:72:9;72:15:77::0;74:33:74:69;:58::68;;:33::69:1;;;75:31:75:32:0;:20::49:1;:53::63:0;:12::65:1;76:31:76:32:0;:20::39:1;:43::49:0;;:12::51:1;72:15:77:9;;80:27:80:28:0;:16::45:1;:49::72:0;;:8::74:1;81:27:81:28:0;:16::35:1;:39::42:0;:8::44:1;84:16:84:33:0;:37::38;:16:::1;:8::40;85:16:85:33:0;:37::38;:16:::1;:8::40;55:6:86:5;;;;52:4;93::108::0;;;;94:27:94:39;;:8::41:1;;96:25:96:61:0;:50::60;:25::61:1;;;97::97::0;:50::60;:25::61:1;;;100:27:100:28:0;:16::45:1;:49::55:0;:8::57:1;101:27:101:28:0;:16::35:1;:39::44:0;;:8::46:1;103:27:103:28:0;:16::45:1;:8::57;104:27:104:28:0;:16::35:1;:8::46;106:16:106:33:0;:37::38;:16:::1;:8::40;107:16:107:33:0;:37::38;:8::40:1;93:22:108:5;;;31:0:109:1",
+    "logs": [],
+    "requires": [
+      { "ip": 17, "line": 57 },
+      { "ip": 27, "line": 60 },
+      { "ip": 53, "line": 70 },
+      { "ip": 58, "line": 71 },
+      { "ip": 70, "line": 75 },
+      { "ip": 75, "line": 76 },
+      { "ip": 82, "line": 80 },
+      { "ip": 86, "line": 81 },
+      { "ip": 90, "line": 84 },
+      { "ip": 94, "line": 85 },
+      { "ip": 106, "line": 94 },
+      { "ip": 121, "line": 100 },
+      { "ip": 126, "line": 101 },
+      { "ip": 129, "line": 103 },
+      { "ip": 132, "line": 104 },
+      { "ip": 136, "line": 106 },
+      { "ip": 140, "line": 107 }
+    ],
+    "sourceTags": "52:52:sc;69:69:sc;133:135:sc"
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.14.0",
+    "options": {
+      "enforceFunctionParameterTypes": true,
+      "enforceLocktimeGuard": true
+    }
+  },
+  "updatedAt": "2026-11-21T18:06:19.050Z"
+}

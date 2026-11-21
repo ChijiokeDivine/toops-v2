@@ -3,12 +3,26 @@ import 'server-only'
 import { randomInt } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { formatPusdUnits } from '@/lib/pusd'
+import { formatPusdUnits, pusdUnitsToSats } from '@/lib/pusd'
+import { getPusdRate } from '@/lib/pusd-server'
+import {
+  createMatchEscrow,
+  fundMatchEscrow,
+  getEscrowTimeoutBlock,
+  getPlatformTreasuryLockingBytecode,
+  instantiateStoredMatchEscrow,
+  pkhFromAddress,
+  refundMatchEscrow,
+  settleMatchEscrow,
+  storedParams,
+  type StoredMatchEscrowParams,
+} from '@/lib/contracts'
 import { publishMinesEvent } from './bus'
 import {
   MINES_ABANDON_MS,
   MINES_BOARD_SIZE,
   MINES_BOMB_COUNT,
+  MINES_FEE_BPS,
   MINES_MAX_STAKE_PUSD,
   MINES_MIN_STAKE_PUSD,
   MINES_QUEUE_TTL_MS,
@@ -381,7 +395,86 @@ async function createMatchWithinTx(
     data: { activeMinesMatchId: match.id },
   })
 
+  await provisionMatchEscrow(tx, match.id, [seat0.userId, seat1.userId], stakePusd)
+
   return { match, runtime }
+}
+
+async function provisionMatchEscrow(
+  tx: Tx,
+  matchId: string,
+  userIds: string[],
+  stakePusd: bigint,
+): Promise<void> {
+  try {
+    const wallets = await tx.platformWallet.findMany({ where: { userId: { in: userIds } } })
+    if (wallets.length !== 2) return
+    const player1Wallet = wallets.find((wallet) => wallet.userId === userIds[0])
+    const player2Wallet = wallets.find((wallet) => wallet.userId === userIds[1])
+    if (!player1Wallet || !player2Wallet) return
+
+    const [rate, timeoutBlock, treasuryLockingBytecode] = await Promise.all([
+      getPusdRate(),
+      getEscrowTimeoutBlock(),
+      Promise.resolve(getPlatformTreasuryLockingBytecode()),
+    ])
+    const stakeSats = pusdUnitsToSats(stakePusd, rate.satsPerPusd)
+    if (stakeSats <= 0n) return
+
+    const match = await tx.minesMatch.findUnique({
+      where: { id: matchId },
+      select: { serverSeedHash: true },
+    })
+    if (!match) return
+
+    const contract = createMatchEscrow({
+      player1Pkh: pkhFromAddress(player1Wallet.address),
+      player2Pkh: pkhFromAddress(player2Wallet.address),
+      stake: stakeSats,
+      feeBps: MINES_FEE_BPS,
+      serverSeedHash: match.serverSeedHash,
+      timeoutBlock,
+      treasuryLockingBytecode,
+    })
+    const { outpoint } = await fundMatchEscrow({
+      contract,
+      player1: {
+        address: player1Wallet.address,
+        derivationIndex: player1Wallet.derivationIndex,
+      },
+      player2: {
+        address: player2Wallet.address,
+        derivationIndex: player2Wallet.derivationIndex,
+      },
+      stakeSats,
+    })
+
+    await tx.minesMatch.update({
+      where: { id: matchId },
+      data: {
+        escrowOutpoint: outpoint,
+        escrowParams: storedParams(
+          contract,
+          {
+            player1Pkh: pkhFromAddress(player1Wallet.address),
+            player2Pkh: pkhFromAddress(player2Wallet.address),
+            stake: stakeSats,
+            feeBps: MINES_FEE_BPS,
+            serverSeedHash: match.serverSeedHash,
+            timeoutBlock,
+            treasuryLockingBytecode,
+          },
+          {
+            player1Address: player1Wallet.address,
+            player2Address: player2Wallet.address,
+          },
+        ) as unknown as Prisma.InputJsonValue,
+      },
+    })
+  } catch (error) {
+    // Chain or wallet failures must not block the off-chain match.
+    console.error('[mines] escrow provisioning failed', matchId, error)
+  }
 }
 
 export async function joinMinesQueue(
@@ -841,7 +934,16 @@ async function settleLocked(state: MinesRuntime, now: number): Promise<void> {
       await acquireLock(tx, matchLockKey(state.matchId))
       const match = await tx.minesMatch.findUnique({
         where: { id: state.matchId },
-        select: { id: true, status: true, potPusd: true, stakePusd: true, nonce: true },
+        select: {
+          id: true,
+          status: true,
+          potPusd: true,
+          stakePusd: true,
+          nonce: true,
+          serverSeed: true,
+          escrowOutpoint: true,
+          escrowParams: true,
+        },
       })
       if (!match) throw new MinesError('Match not found.', 404, 'MATCH_NOT_FOUND')
       if (match.status === 'SETTLED' || match.status === 'CANCELLED') return
@@ -897,6 +999,8 @@ async function settleLocked(state: MinesRuntime, now: number): Promise<void> {
           winReason: reason,
         },
       })
+
+      await settleEscrowOnChain(tx, match, winner.userId, winnerSeat)
     })
   } catch (error) {
     // The next state poll retries settlement; the board is already final.
@@ -911,6 +1015,87 @@ async function settleLocked(state: MinesRuntime, now: number): Promise<void> {
   await setRuntime(state)
   await clearClock(state.matchId)
   await publishSnapshot(state, now)
+}
+
+type EscrowRow = {
+  serverSeed: string
+  escrowOutpoint: string | null
+  escrowParams: Prisma.JsonValue | null
+}
+
+async function settleEscrowOnChain(
+  tx: Tx,
+  match: EscrowRow,
+  winnerUserId: string,
+  winnerSeat: number,
+): Promise<void> {
+  if (!match.escrowOutpoint || !match.escrowParams) return
+
+  try {
+    const params = match.escrowParams as unknown as StoredMatchEscrowParams
+    const wallet = await tx.platformWallet.findUnique({ where: { userId: winnerUserId } })
+    if (!wallet) return
+
+    const stakeSats = BigInt(params.stakeSats)
+    const potSats = stakeSats * 2n
+    const feeSats = (potSats * BigInt(params.feeBps)) / 10_000n
+
+    await settleMatchEscrow({
+      contract: instantiateStoredMatchEscrow(params),
+      outpoint: match.escrowOutpoint,
+      serverSeed: match.serverSeed,
+      winnerSeat,
+      winnerAddress: wallet.address,
+      treasuryLockingBytecode: params.treasuryLockingBytecode,
+      feeSats,
+      payoutSats: potSats - feeSats,
+      feeSigner: { address: wallet.address, derivationIndex: wallet.derivationIndex },
+    })
+  } catch (error) {
+    console.error('[mines] escrow settlement failed', winnerUserId, error)
+  }
+}
+
+/** Refunds expired, never-settled escrows. Safe to call repeatedly. */
+export async function refundExpiredEscrows(): Promise<number> {
+  const matches = await prisma.minesMatch.findMany({
+    where: { escrowOutpoint: { not: null }, status: 'CANCELLED' },
+    select: { id: true, escrowOutpoint: true, escrowParams: true },
+    take: 25,
+  })
+
+  let refunded = 0
+  for (const match of matches) {
+    if (!match.escrowOutpoint || !match.escrowParams) continue
+    try {
+      const params = match.escrowParams as unknown as StoredMatchEscrowParams
+      const players = await prisma.minesMatchPlayer.findMany({
+        where: { matchId: match.id },
+        select: { userId: true },
+      })
+      const feeWallet = await prisma.platformWallet.findFirst({
+        where: { userId: { in: players.map((player) => player.userId) } },
+      })
+      if (!feeWallet) continue
+
+      await refundMatchEscrow({
+        contract: instantiateStoredMatchEscrow(params),
+        outpoint: match.escrowOutpoint,
+        player1Address: params.player1Address,
+        player2Address: params.player2Address,
+        stakeSats: BigInt(params.stakeSats),
+        timeoutBlock: params.timeoutBlock,
+        feeSigner: {
+          address: feeWallet.address,
+          derivationIndex: feeWallet.derivationIndex,
+        },
+      })
+      refunded += 1
+    } catch (error) {
+      console.error('[mines] escrow refund failed', match.id, error)
+    }
+  }
+  return refunded
 }
 
 async function cancelLocked(state: MinesRuntime, reason: string, now: number): Promise<void> {
