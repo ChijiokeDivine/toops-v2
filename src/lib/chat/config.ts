@@ -8,7 +8,7 @@
  */
 
 export const CHAT_CHANNEL = 'newcomers'
-export const CHAT_TITLE = 'Newcomers'
+export const CHAT_TITLE = 'Chat'
 
 /** Maximum message length, counted in Unicode code points (so one emoji = 1). */
 export const CHAT_MAX_LENGTH = 300

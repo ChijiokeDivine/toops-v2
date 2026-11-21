@@ -281,7 +281,7 @@ export function ChatDock() {
         aria-label={`${CHAT_TITLE} chat`}
       >
         <header className="chat-header">
-          <FlagUkIcon className="chat-flag" />
+          
           <span className="chat-title">{CHAT_TITLE}</span>
           <button
             type="button"
