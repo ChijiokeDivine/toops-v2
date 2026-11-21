@@ -13,7 +13,7 @@ import { SiteHeader } from './_components/site-header'
 
 const outfit = Outfit({ subsets: ['latin'], display: 'swap' })
 
-const description = 'toops — a Bitcoin Cash project built for BCH BLAZE 2026.'
+const description = 'toops - Online PVP games for everyone'
 const ogImage = { url: '/images/og.png', width: 1200, height: 630, alt: 'toops' }
 
 export const metadata: Metadata = {

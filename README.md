@@ -1,349 +1,151 @@
 # toops
 
-Bitcoin Cash project for **BCH BLAZE 2026**, built on **chipnet** first.
+Bitcoin Cash betting platform built for **BCH BLAZE 2026**. Four provably fair PvP games staked in **PUSD** (a BCH CashToken), backed by a custodial HD wallet with on-chain deposits, withdrawals, and CashScript escrow. Development targets **chipnet**.
 
-Fullstack **Next.js 16** app (App Router) — UI, API routes, and server-side logic live in one project and deploy to Vercel as a single app. There is **no separate backend server**.
+One Next.js 16 app — UI, API routes, and game engines in a single project. There is no separate backend server.
 
 ## Stack
 
-| Layer               | Choice                                                                                                      |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| App                 | Next.js 16 (App Router, Turbopack) + React 19 + TypeScript                                                  |
-| Styling             | Tailwind CSS v4 (PostCSS plugin)                                                                            |
-| Database            | Postgres on Supabase + Prisma ORM 6                                                                         |
-| Auth                | Telegram Login Widget + WizardConnect transaction challenge (no Reown / WalletConnect project ID)           |
-| Wallet connection   | [WizardConnect](https://www.npmjs.com/package/@wizardconnect/react) (`@wizardconnect/react`)                |
-| Custody             | HD platform wallets (`m/44'/145'/0'/0/<index>`); xpriv in env/Infisical, XPUB + public addresses in the DB  |
-| BCH smart contracts | [XO Stack](https://stack.xo.cash): `engine`, `templates`, `types`, `primitives`, `crypto`, `state`, `utils` |
-| Covenant language   | [CashScript](https://cashscript.org) + `cashc` compiler                                                     |
-| BCH primitives      | `@bitauth/libauth`                                                                                          |
-| Tests               | Vitest + Testing Library + happy-dom                                                                        |
-| Lint / format       | oxlint + Prettier                                                                                           |
-| Hosting             | Vercel (one project, no external server)                                                                    |
+| Layer | Choice |
+| --- | --- |
+| App | Next.js 16 (App Router, Turbopack) · React 19 · TypeScript |
+| Styling | Tailwind CSS v4 (PostCSS plugin) |
+| Database | Postgres on Supabase · Prisma 6 |
+| Auth | Telegram Login Widget + WizardConnect challenge transaction (no Reown project ID) |
+| Custody | HD platform wallets (`m/44'/145'/0'/0/<index>`); xpriv in env, xpub + addresses in the DB |
+| Contracts | CashScript 0.14 → `PlatformTreasury`, `MatchEscrow` |
+| BCH | `@bitauth/libauth`, `@xo-cash/*` (XO Stack), `@mr-zwets/cauldron-swap-sdk` |
+| Tests | Vitest · Testing Library · happy-dom |
+| Lint / format | oxlint · Prettier |
+| Hosting | Vercel |
+
+## Games
+
+| Game | Route | Format |
+| --- | --- | --- |
+| Pocket Dice | `/originals/pocket-dice` | Shared pot, pooled table |
+| Roulette | `/originals/roulette` | Shared pool, 15 slots (7 red / 7 black / 1 green) |
+| Mines Duel | `/originals/mines` | Real-time 1v1, shared 35-tile board |
+| Crash (Dual) | `/originals/crash` | Real-time 1v1 multiplier race |
+| Rando | `/originals/rando` | Coming-soon placeholder |
+
+Catalogue pages are `/multiplayer` (Pocket Dice, Roulette) and `/dual` (Mines, Crash). `/play` drops a player back into whatever they already have in flight — a queued ticket or an open match — and otherwise lands on `/multiplayer`.
+
+Stakes are **0.20 – 1,000.00 PUSD** across every game. Mines and Crash withhold a **1% platform fee**; payouts are credited in the same Postgres transaction that writes the ledger entry.
 
 ## Requirements
 
-- Node.js 20.9+ (tested with Node 22)
-- pnpm 10+ (`npm install -g pnpm` or `corepack enable`)
+- Node.js 20.9+ (tested on 22)
+- pnpm (`packageManager` pins `pnpm@12.18.0`)
 
 ## Getting started
 
 ```bash
-pnpm install
+pnpm install                 # postinstall runs `prisma generate`
 cp .env.example .env.local   # Windows: copy .env.example .env.local
 pnpm db:deploy:local         # apply migrations to your Supabase database
 pnpm dev
 ```
 
-The app runs at http://localhost:3000. The health endpoint is at `/api/health`.
-
-`pnpm install` runs `prisma generate` automatically through the `postinstall` script.
+App: http://localhost:3000 · health: `GET /api/health`
 
 ## Environment variables
 
-`.env.local` is gitignored. Copy `.env.example` and fill in the values:
+`.env.local` is gitignored; `.env.example` is the template. Only `NEXT_PUBLIC_*` values reach the browser.
 
-```dotenv
-# Public: browser + server
-NEXT_PUBLIC_BCH_NETWORK=chipnet
-NEXT_PUBLIC_APP_NAME=toops
-NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_BCH_NETWORK` | Network shown to the browser (`chipnet` / `mainnet`) |
+| `NEXT_PUBLIC_APP_NAME` | Brand name |
+| `NEXT_PUBLIC_EMBER2026_ADDRESS` | CashTokens address in the top banner for EMBER2026 votes |
+| `BCH_NETWORK` | Server-side network switch |
+| `ELECTRUM_WSS_URL` | Electrum WebSocket endpoint |
+| `DATABASE_URL` | Supabase **transaction pooler** (`:6543`, `?pgbouncer=true&connect_timeout=15`) |
+| `DIRECT_URL` | Supabase **session pooler** (`:5432`); Prisma migrations use this |
+| `TELEGRAM_BOT_TOKEN` | BotFather token; also verifies Login Widget payloads |
+| `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | Widget bot username, without `@` |
+| `PLATFORM_WALLET_XPRIV` | HD master or account key. Secret manager only |
+| `PLATFORM_WALLET_XPUB` | Optional; derived from the xpriv when unset |
+| `WITHDRAWAL_FEE_SATS` | BCH network fee withheld from the balance |
+| `PUSD_TOKEN_ID` | CashToken category; per-network default when unset |
+| `PUSD_DECIMALS` · `PUSD_DUST_SATS` | Token precision (`2`) and dust per output |
+| `PARYON_API_URL` | Paryon oracle/stats API for the BCH/USD peg and swaps |
+| `BCH_USD_PRICE` | Offline fallback price |
+| `MIN_WITHDRAWAL_PUSD` | Minimum withdrawal |
+| `CRON_SECRET` | Shared secret for the cron routes (`Authorization: Bearer`, or `x-cron-secret`) |
+| `PLATFORM_TREASURY_{PRIVATE_KEY,PUBLIC_KEY,LOCKING_BYTECODE}` | PlatformTreasury admin key material |
+| `REDIS_URL` | Optional. Ephemeral match state + SSE pub/sub bus |
 
-# Server-only
-BCH_NETWORK=chipnet
-ELECTRUM_WSS_URL=wss://chipnet.imaginary.cash:50004
-TELEGRAM_BOT_TOKEN=
-DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true&connect_timeout=15"
-DIRECT_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
-PLATFORM_WALLET_XPRIV=
-PLATFORM_WALLET_XPUB=
-WITHDRAWAL_FEE_SATS=1000
-PUSD_TOKEN_ID=
-PUSD_DECIMALS=2
-PUSD_DUST_SATS=1000
-PARYON_API_URL=
-BCH_USD_PRICE=
-MIN_WITHDRAWAL_PUSD=1
-CRON_SECRET=
-# Optional in local dev, strongly recommended in production: ephemeral Mines
-# state + the realtime pub/sub bus. Without it, live matches only stay in sync
-# within a single function instance.
-REDIS_URL=
-```
+Use the transaction pooler for `DATABASE_URL` and the session pooler for `DIRECT_URL`. The longer connect timeout absorbs transient `P1001` errors while Supabase resumes a pooled connection. Apply migrations before adding users: wallet creation needs the `platform_wallet_index_seq` sequence the HD migration creates.
 
-### Database
-
-Use the Supabase **transaction-mode pooler** (`:6543`, `?pgbouncer=true&connect_timeout=15`) for `DATABASE_URL`, and the **session-mode pooler** (`:5432`) for `DIRECT_URL`, which Prisma uses for migrations. The longer connect timeout avoids transient `P1001` errors while Supabase resumes a pooled connection.
-
-The HD wallet migration creates `platform_wallet_index_seq`, a Postgres sequence that hands out unique derivation indexes atomically. If you add users while the sequence does not exist, wallet creation fails — apply migrations first.
-
-### Telegram sign-in
-
-1. Create a bot with [@BotFather](https://t.me/BotFather) (`/newbot`).
-2. Put the token in `TELEGRAM_BOT_TOKEN` and the bot username (without `@`) in `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`.
-3. Register the domain that serves the app with BotFather: `/setdomain`. The Login Widget refuses to embed on unregistered domains. For local development, use a tunnel (for example ngrok) or test on the deployed URL.
-
-### WizardConnect wallet sign-in
-
-No Reown project ID is required. WizardConnect pairs the dapp with the wallet over its own relay and the QR code/URI is generated in the browser.
-
-1. Open the app and click **Connect BCH wallet**.
-2. Scan the QR code with a WizardConnect-compatible wallet (Cashonize, Paytaca, ZapIt) on chipnet.
-3. The app asks the wallet to sign a **synthetic challenge transaction**. The transaction spends a fake outpoint derived from a server nonce, so it cannot move funds.
-4. The server verifies the DER signature and the claimed P2PKH address with libauth. The challenge is single-use and expires after 10 minutes.
-
-Wallet ownership is proven by the transaction signature because WizardConnect does not expose message signing.
-
-### HD platform wallet (3-layer custody)
-
-Every user gets a unique deposit address derived from one platform master key:
-
-```
-m/44'/145'/0' / 0 / <derivationIndex>
-       account   receive
-```
-
-- **Layer 1 — master secret.** `PLATFORM_WALLET_XPRIV` lives only in the deployment environment (Vercel env vars, Infisical, or similar). It is never written to Postgres and never sent to the browser. `PLATFORM_WALLET_XPRIV` may be the root key (depth 0) or the account key (depth 3).
-- **Layer 2 — public key material.** `PLATFORM_WALLET_XPUB` (account-level, depth 3) can derive receiving addresses but cannot spend. The database stores only `address` and `derivationIndex` on `PlatformWallet`.
-- **Layer 3 — signing.** Only `POST /api/wallet/withdraw` derives the private key for the user's index, in memory, signs the payout P2PKH transaction, and then drops the reference. Nothing is persisted or logged.
-
-Generate a chipnet key pair once and store the xpriv in your secret manager:
-
-```bash
-node -e "import('@bitauth/libauth').then(m => {
-  const root = m.deriveHdPrivateNodeFromBip39Mnemonic(m.generateBip39Mnemonic())
-  const account = m.deriveHdPath(root, \"m/44'/145'/0'\")
-  console.log('PLATFORM_WALLET_XPRIV=' + m.encodeHdPrivateKey({ node: root, network: 'testnet' }).hdPrivateKey)
-  console.log('PLATFORM_WALLET_XPUB=' + m.encodeHdPublicKey({ node: m.deriveHdPublicNode(account), network: 'testnet' }).hdPublicKey)
-})"
-```
-
-> **Back up the master key.** Losing it makes every platform deposit address unspendable. Never reuse the chipnet key on mainnet; generate a fresh mainnet pair (xprv/xpub) before launch.
-
-### PUSD ledger
-
-Balances are denominated in **PUSD** (ParyonUSD), a 2-decimal CashToken on BCH. Users never see the underlying BCH balance: BCH is only the settlement/fee asset.
-
-- **Live chipnet token:** deployment `chipnet-16`, category `dfe50223c8d5cba8dcef8dff6d92b61deb88a8ba44947367f2b746487b56039b`. On mainnet the default category is `2469acc5afa4b10cb5b5c04afb89c3a3ffd61c5da9c01e26d00951cae2a02544`. Override with `PUSD_TOKEN_ID`.
-- **Rate source:** the Paryon oracle/stats API (`PARYON_API_URL`, default `https://chipnet-16.paryonusd.com`) supplies `bchUsdPrice`; the app derives `satsPerPusd`. `BCH_USD_PRICE` is an optional offline fallback.
-- **Ledger fields:** `User.balancePusd`, `Deposit.amountPusd`/`swapTxid`, `Withdrawal.amountPusd`/`feePusd`/`payoutAsset`, and `LedgerEntry.amountPusd`/`balanceAfterPusd`, all in PUSD base units. Legacy satoshi columns are retained but deprecated.
-- **Unit helpers:** `src/lib/pusd.ts` (pure, client-safe) and `src/lib/pusd-server.ts` (token config + oracle).
-
-### Deposits and withdrawals
-
-- **PUSD deposits:** send PUSD to the user's deposit address (token-aware P2PKH). `POST /api/wallet/sync` detects the fungible token outputs for the configured category and credits them 1:1.
-- **BCH deposits:** BCH sent to the same address is swapped to PUSD through **Cauldron** (`@mr-zwets/cauldron-swap-sdk`) using the deposit output itself, so one deposit can never drain the BCH backing another. Deposits below `MIN_SWAP_SATS` (50,000 sats), or swaps that fail, are credited at the oracle rate and the BCH is retained as the payout reserve.
-- **Sync:** `POST /api/wallet/sync` scans the signed-in user's address over Electrum WSS (`blockchain.scripthash.get_history` + `blockchain.transaction.get`), credits confirmed outputs, and appends a `LedgerEntry`. Detection only treats a transaction as platform change when it spends a known platform outpoint, so deposits chained to earlier transactions are still detected. The unique `(txid, vout)` index plus a conditional claim make the credit idempotent, and `PENDING` rows (or legacy rows credited only to the old satoshi balance) are retried and converted on every sync.
-- **Bulk sync:** `GET /api/cron/sync-deposits` scans a batch of wallets. Protect it with `CRON_SECRET` (`Authorization: Bearer <secret>` or `x-cron-secret`). `vercel.json` schedules it every 5 minutes; Vercel sends the bearer token automatically when `CRON_SECRET` is set.
-- **Withdrawals:** `POST /api/wallet/withdraw` takes `{ amountPusd, payoutAsset }`, where `payoutAsset` is `PUSD` (CashToken transfer) or `BCH` (converted at the oracle rate and paid from the BCH reserve). It can only pay the wallet address linked to the account. The PUSD amount plus fee is reserved with a conditional decrement before broadcast and refunded if the broadcast fails.
-- **Minimum / fee:** `MIN_WITHDRAWAL_PUSD` (default `1`) sets the minimum. `WITHDRAWAL_FEE_SATS` sets the BCH network-fee floor; the builder raises it when the estimated transaction size requires more, and the equivalent is charged in PUSD.
-
-### XP and daily check-ins
-
-XP is off-chain account progress and has nothing to do with the BCH balance.
-
-- **Claim:** `POST /api/xp/claim` requires a session. Each user can claim once per UTC day.
-- **Reward:** 100 XP for the first day, +25 XP per consecutive day, capped at +150 XP bonus (day 7 and beyond).
-- **Persistence:** `User.xp`, `User.xpStreak`, and `User.xpLastClaimedAt` hold the running totals; every claim appends an `XpClaim` row.
-- **Anti-double-claim:** the unique `(userId, dayKey)` index on `XpClaim` is the database-level guard, so concurrent requests cannot claim twice.
-- **Levels:** every 500 XP is a new level. The `/xp` page shows the current level, streak, claim button, countdown to the next UTC midnight, and claim history.
-- **Missing a day:** a gap of more than one UTC day resets the streak to day one on the next claim.
-
-Relevant code:
-
-- `src/lib/xp.ts` — claim rules, streak/level math, and summary queries.
-- `src/app/api/xp/claim/route.ts` — authenticated claim endpoint.
-- `src/app/xp/page.tsx` — signed-in dashboard and signed-out prompt.
-- `src/components/xp/xp-claim-card.tsx` — claim button and live countdown.
-- `src/components/account/account-nav.tsx` — header XP, notifications, and profile menu.
-
-### Mines Duel
-
-Real-time 1v1 Mines at `/originals/mines`. Both players lock an equal PUSD stake (minimum `$2.00`), then alternate picks on one shared 35-tile board until someone reaches 1,750 points or the 26 safe tiles run out.
-
-- **Board:** 35 tiles, 9 bombs, 26 safe. The loser of a bomb hit loses 35% of banked points (rounded to the nearest 10) and their streak.
-- **Aegis Shield:** a 1-in-6 board roll hides one shield in a safe tile. It absorbs a single bomb without a penalty and preserves the streak; the bomb is still revealed.
-- **Scoring:** consecutive safe picks pay `70 / 105 / 175 / 280`, capped at 280. Turns alternate under a strict 10-second clock; a timeout auto-picks a random unrevealed tile.
-- **Win:** first to 1,750 is an instant knockout. If the board is exhausted, highest score wins, then fewer bombs hit, then faster average click time.
-- **Payout:** winner receives the pot minus a 1% platform fee, credited in the same Postgres transaction that records the ledger entry.
-- **Provably fair:** `HMAC-SHA256(serverSeed, clientSeed1 + clientSeed2 + nonce)` is expanded in counter mode: word 1 rolls the shield, the following words run a Fisher-Yates bomb shuffle. The server seed hash is published at match creation and the seed itself is revealed at settlement (`/api/mines/verify`).
-
-**Realtime on Vercel.** Serverless functions cannot accept WebSocket upgrades, so the match room runs over Server-Sent Events (`GET /api/mines/events`) with throttled `POST` calls for picks, presence, and the ~25 fps ghost cursor. The same event shape (`snapshot`, `cursor`, `notice`) is used throughout. A 10-second clock is enforced lazily by the state/pick routes and by a 1-second tick inside the SSE stream.
-
-**Ephemeral state.** Active boards live in Redis (`REDIS_URL`) behind a per-match distributed lock, with a process-global memory fallback for local development. The durable snapshot stays in `MinesMatch.state`, so a Redis eviction or a redeploy rehydrates the match instead of losing it. On Vercel, set `REDIS_URL` (Upstash and Redis Cloud both work) so two function instances see the same match.
-
-Relevant code:
-
-- `src/lib/mines/` — pure rules, fairness, runtime store, engine, and settlement.
-- `src/app/api/mines/` — state, queue, ready, pick, heartbeat, cursor, match, verify, events.
-- `src/components/mines/` — board, player strip, clock, bet panel, result overlay, fairness modal.
-- `src/app/originals/mines/` — page shell and flat dark board styling.
-
-## Authentication
-
-- **Sessions:** random 32-byte tokens stored as SHA-256 hashes in the `Session` table, sent as an httpOnly, SameSite=Lax cookie (`toops_session`) for 30 days. Raw tokens are never stored.
-- **Telegram:** the widget payload is verified server-side with HMAC-SHA256 using the bot token. Signatures older than 24 hours are rejected.
-- **BCH wallet:** the server issues a single-use challenge transaction (10-minute TTL). The wallet signs it with the receive-path key, and the server verifies the signature against the challenge template and the claimed address. Challenges are consumed atomically to prevent replay; expired rows are purged on the next challenge request and by the cron sync.
-- **Payout wallet linking:** a signed-in user can attach a wallet address through the same challenge flow; the address is stored on `User.bchAddress` and is the only valid withdrawal destination.
-- **Platform wallet:** created on first sign-in if missing. The BIP44 index comes from the Postgres sequence; only the public address is stored.
-
-Relevant code:
-
-- `src/lib/auth/` — sessions, Telegram verification, user upserts, wallet challenges.
-- `src/lib/bch/` — network, address normalization, Electrum client, challenge transaction verification.
-- `src/lib/wallet/platform-wallet.ts` — HD address/key derivation and sequence allocation.
-- `src/lib/wallet/deposits.ts` — deposit scanning and idempotent crediting.
-- `src/lib/wallet/withdrawals.ts` — UTXO selection, signing, reservation, broadcast.
-- `src/app/api/auth/` — `telegram`, `wallet/challenge`, `wallet/verify`, `me`, `signout`.
-- `src/app/api/wallet/` — `route`, `link`, `sync`, `withdraw`.
-- `src/app/api/cron/sync-deposits` — protected bulk deposit sync.
-- `src/components/auth/` — sign-in UI, WizardConnect pairing, account wallet panel.
+**Telegram sign-in:** create a bot with [@BotFather](https://t.me/BotFather) (`/newbot`), set the token and username, then register the serving domain with `/setdomain` — the Login Widget refuses to embed elsewhere. Use a tunnel (ngrok) or the deployed URL for local testing.
 
 ## Scripts
 
-| Command                  | What it does                                               |
-| ------------------------ | ---------------------------------------------------------- |
-| `pnpm dev`               | Start the Next.js dev server (Turbopack)                   |
-| `pnpm build`             | Production build + type check                              |
-| `pnpm start`             | Serve the production build locally                         |
-| `pnpm typecheck`         | Type-check only                                            |
-| `pnpm lint`              | Run oxlint                                                 |
-| `pnpm format`            | Format with Prettier                                       |
-| `pnpm format:check`      | Check formatting in CI                                     |
-| `pnpm test`              | Run tests once                                             |
-| `pnpm test:watch`        | Run tests in watch mode                                    |
-| `pnpm test:coverage`     | Run tests with coverage                                    |
-| `pnpm contracts:compile` | Compile `contracts/main.cash` to `src/contracts/main.json` |
-| `pnpm db:generate`       | Regenerate Prisma Client                                   |
-| `pnpm db:migrate`        | Create/apply a dev migration against `.env.local`          |
-| `pnpm db:deploy`         | Apply committed migrations (use on Vercel; reads env vars) |
-| `pnpm db:deploy:local`   | Apply migrations using `.env.local`                        |
-| `pnpm db:studio`         | Open Prisma Studio                                         |
+| Command | What it does |
+| --- | --- |
+| `pnpm dev` | Next.js dev server (Turbopack) |
+| `pnpm build` | `prisma generate` + production build |
+| `pnpm start` | Serve the production build |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm lint` · `pnpm format` · `pnpm format:check` | oxlint · Prettier write · Prettier check |
+| `pnpm test` · `pnpm test:watch` · `pnpm test:coverage` | Vitest |
+| `pnpm contracts:compile` | Compile both `.cash` sources into `src/contracts/*.json` |
+| `pnpm db:generate` | Regenerate Prisma Client |
+| `pnpm db:migrate` | Create/apply a dev migration against `.env.local` |
+| `pnpm db:deploy` | Apply committed migrations using ambient env vars (Vercel) |
+| `pnpm db:deploy:local` | Apply committed migrations using `.env.local` |
+| `pnpm db:studio` | Prisma Studio |
 
-## Project structure
 
-```text
-toops/
-├─ contracts/                    # CashScript sources (*.cash)
-├─ prisma/
-│  ├─ schema.prisma              # User, PlatformWallet, Session, AuthChallenge, Deposit, Withdrawal, LedgerEntry
-│  └─ migrations/                # Committed SQL migrations
-├─ src/
-│  ├─ app/
-│  │  ├─ _components/            # Landing page UI (hero, game rows, header)
-│  │  ├─ api/
-│  │  │  ├─ auth/                # Telegram, wallet challenge/verify, session routes
-│  │  │  ├─ wallet/              # Summary, link, sync, withdraw
-│  │  │  ├─ cron/                # Protected bulk deposit sync
-│  │  │  └─ health/route.ts
-│  │  ├─ layout.tsx              # Root layout + metadata
-│  │  ├─ page.tsx                # Landing page + sign-in / account panel
-│  │  ├─ globals.css             # Tailwind entry
-│  │  └─ icon.svg                # Favicon
-│  ├─ components/auth/           # Sign-in, WizardConnect, account wallet panel
-│  ├─ contracts/                 # Compiled contract artifacts (output)
-│  ├─ lib/
-│  │  ├─ auth/                   # Telegram, sessions, user upserts, challenges
-│  │  ├─ bch/                    # Network, address, Electrum, challenge verification
-│  │  ├─ wallet/                 # HD derivation, deposits, withdrawals
-│  │  └─ db.ts                   # Prisma client singleton
-│  └─ test/                      # Vitest setup + helpers
-├─ .env.example                  # Environment template
-├─ next.config.ts                # Next config + server externals
-├─ postcss.config.mjs            # Tailwind v4 via PostCSS
-├─ prisma/schema.prisma
-└─ vitest.config.ts              # Test config
-```
+Import from the source root with the `@` alias: `import { formatPusdUnits } from '@/lib/pusd'`.
 
-Import from the source root with the `@` alias:
+## Architecture
 
-```ts
-import { something } from '@/lib/something'
-```
+**Server-authoritative games.** Each game is a `src/lib/<game>/` module — pure `rules.ts`, `fair.ts`, and a `'server-only'` `engine.ts` — behind `/api/<game>/*` route handlers. The client holds no game state; it polls or streams and re-renders. Matchmaking and settlement run inside `prisma.$transaction` guarded by `pg_advisory_xact_lock`, so concurrent requests across function instances cannot double-spend or double-match.
 
-## Server vs client code
+**Money.** `User.balancePusd` is the source of truth, in PUSD base units (2 decimals, 100 units per PUSD). Every movement appends a `LedgerEntry` with a `balanceAfterPusd` snapshot and an idempotency `ref`. Stakes are debited with a conditional decrement, so a request that cannot cover the stake fails rather than overdrawing. Unit helpers: `src/lib/pusd.ts` (client-safe), `src/lib/pusd-server.ts` (token config + oracle).
 
-The BCH libraries have different runtime expectations: WizardConnect uses `localStorage`/`WebSocket`, the XO engine uses IndexedDB and Electrum sockets. Keep them out of server components.
+**Custody.** Three layers: `PLATFORM_WALLET_XPRIV` lives only in the deployment secret manager; the database stores just public addresses and derivation indexes; private keys are derived in memory inside `POST /api/wallet/withdraw` and dropped immediately. One deposit address per user, allocated atomically from a Postgres sequence.
 
-- Put wallet/engine components in files with `'use client'` at the top.
-- If a component touches the engine on mount, load it with `dynamic(() => import('...'), { ssr: false })`.
-- Use `ELECTRUM_WSS_URL` only from server routes; the server Electrum client relies on Node's global `WebSocket` (Node 22).
-- Put server-only secrets in `.env.local` without the `NEXT_PUBLIC_` prefix.
-- Server-only modules import `server-only` so an accidental client import fails at build time.
+**Deposits and withdrawals.** `POST /api/wallet/sync` scans the caller's address over Electrum, credits confirmed PUSD outputs 1:1, and swaps BCH through Cauldron (falling back to the oracle rate, retaining the BCH as payout reserve). `GET /api/cron/sync-deposits` scans a batch and is `CRON_SECRET`-protected. Withdrawals pay PUSD or BCH, only ever to `User.bchAddress`, and reserve the amount before broadcast, refunding if the broadcast fails.
 
-## Backend inside the same app
+**Contracts.** Mines and Crash pots are locked in the CashScript `MatchEscrow` contract, with the fee forced to `PlatformTreasury`; after 144 blocks either player can force a full refund. Settlement enforces the pre-published `serverSeedHash` on-chain, so the fairness commitment cannot be substituted after the fact.
 
-No separate server is needed:
+**Provable fairness.** Every round publishes `sha256(serverSeed)` before betting closes, derives outcomes from HMAC-SHA256 over that seed, and reveals the seed at settlement. `/api/mines/verify` and `/api/dual/verify` replay a finished round from its seeds; Roulette re-draws independently on a void spin.
 
-- **API routes:** `src/app/api/<name>/route.ts` (example: `api/health`).
-- **Server actions:** functions marked `'use server'`, called directly from client components.
-- **Server-only logic:** put it in `src/lib/` and import it only from routes/actions.
-- **Scheduled work:** Vercel Cron calls `GET /api/cron/sync-deposits` with `CRON_SECRET`.
+**Realtime.** Serverless functions cannot accept WebSocket upgrades, so live games use Server-Sent Events (`GET /api/mines/events`, `/api/chat/stream`) with throttled `POST`s for inputs, presence, and cursors. Timers are enforced lazily on state/pick routes and by a tick inside the stream, so a dropped connection cannot stall a match.
 
-Anything that needs a long-running process (websocket server, background worker) is not a good fit for Vercel Functions — keep that logic client-side or on-chain.
+**Auth.** Sessions are 32-byte random tokens stored as SHA-256 hashes and sent as an httpOnly, SameSite=Lax cookie for 30 days; raw tokens are never persisted. Telegram payloads are verified server-side with HMAC-SHA256 (24-hour freshness). Wallet sign-in uses a single-use synthetic challenge transaction (10-minute TTL) verified with libauth, since WizardConnect exposes no message signing.
 
-## Network configuration
+**Server vs client.** Wallet and XO engine libraries use `localStorage`, `WebSocket`, and IndexedDB — keep them in `'use client'` files, and load engine-touching components with `dynamic(() => import(...), { ssr: false })`. Server-only modules import `server-only` so an accidental client import fails the build.
 
-Development targets **chipnet**. Values live in `.env.local` (never committed):
+## Deployment
 
-```dotenv
-NEXT_PUBLIC_BCH_NETWORK=chipnet
-BCH_NETWORK=chipnet
-ELECTRUM_WSS_URL=wss://chipnet.imaginary.cash:50004
-```
+1. Push the repo to GitHub and import it in Vercel; the preset is detected as Next.js. Keep the default build command — `postinstall` already runs `prisma generate`.
+2. Add every `.env.example` variable under **Settings → Environment Variables**. Keep `PLATFORM_WALLET_XPRIV`, `PLATFORM_TREASURY_PRIVATE_KEY`, and `CRON_SECRET` in encrypted vars or a secret manager.
+3. Apply migrations with `pnpm db:deploy` once from a machine that has the production `DATABASE_URL`/`DIRECT_URL`, or prefix the build command with it.
+4. Register the deployment domain with BotFather (`/setdomain`).
+5. Add Vercel Cron entries for `GET /api/cron/sync-deposits` and `GET /api/cron/dual` (dashboard or a `vercel.json`), each sending `CRON_SECRET`.
 
-Chipnet Electrum servers (WSS):
+## Security
 
-- `wss://chipnet.imaginary.cash:50004`
-- `wss://chipnet.bch.ninja:50004`
+- **Custodial by design.** The deployment holds the master xpriv and signs user withdrawals — acceptable for a hackathon demo, not for production funds. Before mainnet: KMS/HSM or MPC custody, withdrawal limits, rate limiting, auditing.
+- **Key separation.** A database leak exposes only public addresses and balances. The xpriv stays in the secret manager; the xpub can derive addresses but cannot spend.
+- **Replay protection.** Wallet challenges are single-use and expire after 10 minutes; Telegram payloads are rejected after 24 hours.
+- **Payout allowlist.** Withdrawals refuse any destination other than the linked `User.bchAddress`.
+- **Mainnet.** Switching networks requires fresh `PLATFORM_WALLET_XPRIV`/`XPUB` keys and re-running migrations; the address prefix changes to `bitcoincash:`.
 
-Chipnet faucets:
+## BCH BLAZE 2026
 
-- https://tbch.googol.cash
-- https://chipnet.bch.ninja
-
-Move to mainnet only at submission time, with minimal funds. Switching networks requires new mainnet `PLATFORM_WALLET_XPRIV`/`XPUB`, plus `BCH_NETWORK=mainnet`.
-
-## Deploying to Vercel
-
-1. Push the repo to GitHub/GitLab.
-2. In Vercel: **Add New → Project → import the repo**.
-3. Framework preset is detected as **Next.js**. Keep the default build command (`pnpm build`); `postinstall` generates Prisma Client.
-4. Add every variable from `.env.example` in **Project → Settings → Environment Variables**. Store `PLATFORM_WALLET_XPRIV` (and `CRON_SECRET`) in Vercel's encrypted env vars or Infisical, never in the repo.
-5. Apply migrations. Either:
-   - Set the build command to `pnpm db:deploy && pnpm build`, or
-   - Run `pnpm db:deploy` once from a machine with the production `DATABASE_URL`/`DIRECT_URL` set.
-6. Deploy. The live URL is what you submit to BLAZE.
-7. Register the Vercel domain with BotFather (`/setdomain`). No Reown project is needed.
-8. Add a Vercel Cron entry for `GET /api/cron/sync-deposits` (for example every 5 minutes) with the `CRON_SECRET` header.
-
-The database is hosted by Supabase; Vercel only runs the Next.js app and Prisma migrations. Keep `DATABASE_URL`, `DIRECT_URL`, `TELEGRAM_BOT_TOKEN`, `PLATFORM_WALLET_XPRIV`, and `CRON_SECRET` server-only.
-
-## Security notes
-
-- **Custodial platform wallets.** The app holds the master xpriv in its environment and signs withdrawals for users. This is acceptable for a chipnet hackathon demo, not for production funds. Before mainnet, move key custody to a KMS/HSM or MPC service, add withdrawal limits, rate limiting, and auditing.
-- **Master key separation.** The database leak exposes only public addresses and balances. The xpriv stays in the deployment secret manager; the optional XPUB can derive addresses but cannot spend.
-- **Replay protection.** Wallet challenges are single-use transactions and expire after 10 minutes. Telegram payloads are rejected after 24 hours.
-- **Payout allowlist.** Withdrawals refuse any destination other than `User.bchAddress`, and the balance is reserved atomically before broadcast.
-- **Cookies.** Session cookies are httpOnly, SameSite=Lax, and `Secure` in production.
-- **Mainnet.** `BCH_NETWORK` changes the address prefix from `bchtest:` to `bitcoincash:`. Generate fresh mainnet keys and re-run migrations before launch.
-
-## BCH BLAZE checklist (Mainnet Track)
-
-- [ ] At least one feature sends a real BCH **mainnet** transaction (chipnet while developing)
-- [ ] WizardConnect **or** XO Template integration for wallet connection
-- [ ] Live, clickable demo URL for judges
-- [ ] Top-of-page banner with: presentation link (Widget Factory template), GitHub repo link, CashTokens address for EMBER2026 votes
-- [ ] Original work (or clearly documented improvements over a pre-hackathon version)
-- [ ] One team member attended a BLAZE stream (roll call) and checked in on Telegram
-
-Widget Factory presentation template:
-https://docs.google.com/presentation/d/1Yfuk9CJkf4U9M_WukcELhumWgj3Ak6345Ewy8hSp-Hk/edit?usp=sharing
+- Baseline demo (work frozen at the fork point): https://toops1.vercel.app/
+- Baseline code: [`nov-14-baseline`](https://github.com/ChijiokeDivine/toops/tree/nov-14-baseline) · active repo: https://github.com/ChijiokeDivine/toops-v2
+- The project deck is served full-page at `/slide` and linked from the top banner as **Widget Factory Deck**.
+- Submission details (banner links and the EMBER2026 payout address) live in [`src/lib/hackathon.ts`](src/lib/hackathon.ts).
 
 ## Notes
 
-- `@xo-cash/engine` is pinned to the `next` release (`0.1.0-next.*`) because the stack is in active development. Upgrade with `pnpm add @xo-cash/engine@next`.
-- The other `@xo-cash/*` packages are pinned to the exact versions the engine expects. Upgrade them together with the engine to avoid duplicate/mismatched copies.
-- `serverExternalPackages` in `next.config.ts` keeps native XO storage modules (`better-sqlite3`, `sqlite3`, `canvas`) and `@prisma/client` out of server bundles.
-- Next.js 16 generates `AGENTS.md` and `next-env.d.ts`; both are safe to keep.
-- `.env.local` is gitignored; only `.env.example` is committed.
+- `@xo-cash/engine` is pinned to the `next` release (`0.1.0-next.*`) because the stack is in active development; upgrade with `pnpm add @xo-cash/engine@next`. The other `@xo-cash/*` packages are pinned to the exact versions the engine expects — upgrade them together.
+- `serverExternalPackages` in [`next.config.ts`](next.config.ts) keeps native XO storage modules (`better-sqlite3`, `sqlite3`, `canvas`), `@prisma/client`, and `ioredis` out of server bundles.
+- Anything that needs a long-running process (a socket server, a background worker) does not fit Vercel Functions — keep that logic client-side or on-chain.
+- Next.js 16 generates `AGENTS.md` and `next-env.d.ts`; both are safe to commit.
