@@ -43,8 +43,8 @@ export const ORIGINALS: Game[] = [
     image: '/images/dice.webp',
   },
   {
-    slug: 'roullete',
-    name: 'Roullete',
+    slug: 'roulette',
+    name: 'Roulette',
     gradient: 'linear-gradient(180deg,#a33af0 0%,#6a15c9 55%,#34086f 100%)',
     image: '/images/roullete.png',
   },
