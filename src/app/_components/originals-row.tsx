@@ -95,7 +95,7 @@ export function OriginalsRow({ games }: { games: Game[] }) {
         {games.map((game) => (
           <div
             key={game.slug}
-            className="w-[calc((100%_-_20px)/3)] shrink-0 snap-start sm:w-[calc((100%_-_30px)/4)] lg:w-[calc((100%_-_50px)/6)]"
+            className="w-[calc((100%_-_20px)/3)] shrink-0 snap-start sm:w-[calc((100%_-_30px)/4)] lg:w-[calc((100%_-_50px)/5)]"
           >
             <GameCard game={game} />
           </div>
