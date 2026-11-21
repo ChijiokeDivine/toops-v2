@@ -47,7 +47,7 @@ export async function POST() {
   } catch (error) {
     console.error('deposit sync failed', error)
     return NextResponse.json(
-      { error: 'Unable to scan the chipnet Electrum server right now.' },
+      { error: 'Unable to scan the BCH Electrum server right now.' },
       { status: 502 },
     )
   }

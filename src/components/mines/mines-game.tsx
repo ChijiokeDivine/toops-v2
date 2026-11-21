@@ -7,6 +7,7 @@ import {
   MINES_BOARD_SIZE,
   MINES_DEFAULT_STAKE_PUSD,
   MINES_HEARTBEAT_MS,
+  MINES_MIN_STAKE_PUSD,
   MINES_POLL_IDLE_MS,
   MINES_POLL_LIVE_MS,
 } from '@/lib/mines/config'
@@ -373,7 +374,10 @@ export function MinesGame() {
     }
     const units = parsePusdInput(stake)
     if (!units) {
-      setNotice({ tone: 'error', text: 'Enter a valid stake of at least $2.00.' })
+      setNotice({
+        tone: 'error',
+        text: `Enter a valid stake of at least $${formatPusdUnits(MINES_MIN_STAKE_PUSD)}.`,
+      })
       return
     }
 

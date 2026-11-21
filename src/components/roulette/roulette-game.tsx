@@ -6,7 +6,7 @@ import { BetPanel, money } from './bet-panel'
 import { OutcomeIcon, SoundOffIcon, SoundOnIcon } from './icons'
 import { RouletteStrip } from './roulette-strip'
 import * as sfx from './sfx'
-import { OUTCOME_LABEL, SLOT_PATTERN, type Bet, type Outcome, type Phase } from './types'
+import { MIN_BET, OUTCOME_LABEL, SLOT_PATTERN, type Bet, type Outcome, type Phase } from './types'
 
 const BETTING_MS = 15000
 const RESULT_MS = 3500
@@ -239,7 +239,7 @@ export function RouletteGame({ demo = true }: { demo?: boolean }) {
   const placeBet = (outcome: Outcome) => {
     if (!started) return
     const value = Number.parseFloat(amount) || 0
-    if (phase !== 'betting' || value <= 0 || value > balance) return
+    if (phase !== 'betting' || value < MIN_BET || value > balance) return
     if (myPick && myPick !== outcome) return // one outcome per round
     if (!myPick && countBettors(betsRef.current) >= MAX_PLAYERS) return
     addBet(outcome, 'me', 'You', value)

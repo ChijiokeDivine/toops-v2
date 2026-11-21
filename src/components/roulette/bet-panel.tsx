@@ -3,7 +3,7 @@
 import type { ChangeEvent } from 'react'
 
 import { DollarBadge, OutcomeIcon, PlayIcon, UsersIcon } from './icons'
-import { OUTCOME_LABEL, type Bet, type Outcome, type Phase } from './types'
+import { MIN_BET, OUTCOME_LABEL, type Bet, type Outcome, type Phase } from './types'
 
 const ORDER: Outcome[] = ['black', 'green', 'red']
 
@@ -56,7 +56,7 @@ export function BetPanel({
   const locked = phase !== 'betting' || !started
 
   const canBet = (o: Outcome) =>
-    !locked && value > 0 && value <= balance && (myPick === null || myPick === o)
+    !locked && value >= MIN_BET && value <= balance && (myPick === null || myPick === o)
 
   const handleInput = (e: ChangeEvent<HTMLInputElement>) => {
     const next = e.target.value.replace(/^\$/, '')

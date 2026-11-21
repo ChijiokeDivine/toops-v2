@@ -6,7 +6,7 @@
  */
 
 export const DUAL_DEFAULT_STAKE_PUSD = 200n
-export const DUAL_MIN_STAKE_PUSD = 100n
+export const DUAL_MIN_STAKE_PUSD = 20n
 export const DUAL_MAX_STAKE_PUSD = 100_000n
 
 /** Preset stakes shown in the picker. */

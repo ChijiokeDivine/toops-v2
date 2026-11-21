@@ -46,7 +46,13 @@ const h = vi.hoisted(() => {
   }
 
   const store = {
-    wallets: [] as Array<{ id: string; userId: string; address: string; derivationIndex: number }>,
+    wallets: [] as Array<{
+      id: string
+      userId: string
+      address: string
+      derivationIndex: number
+      network: string
+    }>,
     users: new Map<string, bigint>(),
     deposits: [] as FakeDeposit[],
     withdrawals: [] as Array<{ userId: string; txid: string | null }>,
@@ -219,6 +225,7 @@ beforeAll(() => {
     userId: 'user-1',
     address: USER_ADDRESS,
     derivationIndex: 0,
+    network: 'chipnet',
   })
 })
 

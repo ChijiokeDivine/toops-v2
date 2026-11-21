@@ -9,7 +9,7 @@
  */
 
 export const POCKET_DICE_DEFAULT_STAKE_PUSD = 200n
-export const POCKET_DICE_MIN_STAKE_PUSD = 100n
+export const POCKET_DICE_MIN_STAKE_PUSD = 20n
 export const POCKET_DICE_MAX_STAKE_PUSD = 100_000n
 
 export const POCKET_DICE_STAKE_PRESETS = [

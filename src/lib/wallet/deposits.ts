@@ -10,6 +10,7 @@ import {
 import { Prisma } from '@prisma/client'
 import type { Deposit } from '@prisma/client'
 import { prisma } from '@/lib/db'
+import { getBchNetwork } from '@/lib/bch/network'
 import { getAddressHistory, getTransactionHex } from '@/lib/bch/electrum'
 import { satsToPusdUnits } from '@/lib/pusd'
 import type { PusdRate } from '@/lib/pusd-server'
@@ -27,7 +28,7 @@ export type DepositSyncResult = {
 }
 
 /** Deposits below this are credited in PUSD at the oracle rate without a swap. */
-const MIN_SWAP_SATS = 50_000n
+const MIN_SWAP_SATS = 10_000n
 
 function p2pkhLockingBytecode(address: string): Uint8Array {
   const decoded = decodeCashAddress(address)
@@ -268,7 +269,7 @@ async function settleDeposit(
  */
 export async function syncUserDeposits(userId: string): Promise<DepositSyncResult> {
   const wallet = await prisma.platformWallet.findUnique({ where: { userId } })
-  if (!wallet) {
+  if (!wallet || wallet.network !== getBchNetwork()) {
     return {
       newDeposits: 0,
       pendingDeposits: 0,

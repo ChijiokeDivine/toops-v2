@@ -147,8 +147,9 @@ async function allocateIndex(): Promise<number> {
 }
 
 export async function ensurePlatformWallet(userId: string): Promise<PlatformWallet> {
+  const network = getBchNetwork()
   const existing = await prisma.platformWallet.findUnique({ where: { userId } })
-  if (existing) return existing
+  if (existing?.network === network) return existing
 
   if (!isPlatformWalletConfigured()) {
     throw new PlatformWalletConfigError('Platform wallets are not configured on this deployment')
@@ -156,24 +157,32 @@ export async function ensurePlatformWallet(userId: string): Promise<PlatformWall
 
   // The sequence allocates indexes atomically; a unique-constraint retry
   // handles the (unlikely) case of a concurrent wallet creation for the same
-  // user winning the race.
+  // user winning the race. A wallet from another network is reissued on the
+  // currently configured network the next time the user signs in.
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const index = await allocateIndex()
     const { address } = derivePlatformAddress(index)
 
     try {
+      if (existing) {
+        return await prisma.platformWallet.update({
+          where: { id: existing.id },
+          data: { address, derivationIndex: index, network },
+        })
+      }
+
       return await prisma.platformWallet.create({
         data: {
           userId,
           address,
           derivationIndex: index,
-          network: getBchNetwork(),
+          network,
         },
       })
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const raced = await prisma.platformWallet.findUnique({ where: { userId } })
-        if (raced) return raced
+        if (raced?.network === network) return raced
         continue
       }
       throw error

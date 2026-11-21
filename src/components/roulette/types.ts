@@ -1,6 +1,9 @@
 export type Outcome = 'red' | 'black' | 'green'
 export type Phase = 'betting' | 'spinning' | 'result'
 
+/** Minimum bet, in whole USD/PUSD. */
+export const MIN_BET = 0.2
+
 export interface Bet {
   id: string
   name: string

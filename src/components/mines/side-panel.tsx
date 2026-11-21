@@ -1,5 +1,6 @@
 'use client'
 
+import { MINES_MIN_STAKE_PUSD } from '@/lib/mines/config'
 import type { MinesMatchSnapshot, MinesQueueView, MinesViewer } from '@/lib/mines/types'
 import { formatPusdUnits, parsePusdInput } from '@/lib/pusd'
 import { usd } from './format'
@@ -24,10 +25,12 @@ type SidePanelProps = {
   now: number
 }
 
+const MIN_STAKE = Number(formatPusdUnits(MINES_MIN_STAKE_PUSD))
+
 function clampStake(value: number, balance: number | null): string {
-  if (!Number.isFinite(value) || value <= 0) return '2.00'
-  const max = balance == null ? value : Math.max(2, balance)
-  const bounded = Math.min(max, Math.max(2, Math.round(value * 100) / 100))
+  if (!Number.isFinite(value) || value <= 0) return formatPusdUnits(MINES_MIN_STAKE_PUSD)
+  const max = balance == null ? value : Math.max(MIN_STAKE, balance)
+  const bounded = Math.min(max, Math.max(MIN_STAKE, Math.round(value * 100) / 100))
   return bounded.toFixed(2)
 }
 
@@ -57,7 +60,7 @@ export function SidePanel(props: SidePanelProps) {
   const balanceUnits = balance == null ? null : Number(balance)
   const quick = (kind: 'half' | 'double' | 'max') => {
     const parsed = parsePusdInput(stake)
-    const current = parsed == null ? 2 : Number(formatPusdUnits(parsed))
+    const current = parsed == null ? MIN_STAKE : Number(formatPusdUnits(parsed))
     if (kind === 'half') onStakeChange(clampStake(current / 2, balanceUnits))
     else if (kind === 'double') onStakeChange(clampStake(current * 2, balanceUnits))
     else onStakeChange(clampStake(balanceUnits ?? current, balanceUnits))
@@ -115,7 +118,9 @@ export function SidePanel(props: SidePanelProps) {
               </button>
             </div>
           </div>
-          <p className="mn-field-hint">Minimum stake $2.00 </p>
+          <p className="mn-field-hint">
+            Minimum stake {usd(formatPusdUnits(MINES_MIN_STAKE_PUSD))}{' '}
+          </p>
         </div>
 
         <div className="mn-action">

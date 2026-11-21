@@ -3,7 +3,9 @@ import 'server-only'
 import { createHash, randomBytes } from 'node:crypto'
 import { cookies } from 'next/headers'
 import type { Prisma } from '@prisma/client'
+import { getBchNetwork } from '@/lib/bch/network'
 import { prisma } from '@/lib/db'
+import { ensurePlatformWallet } from '@/lib/wallet/platform-wallet'
 
 export const SESSION_COOKIE = 'toops_session'
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
@@ -54,6 +56,16 @@ export async function getSession(): Promise<SessionWithUser | null> {
   if (session.expiresAt.getTime() <= Date.now()) {
     await prisma.session.delete({ where: { id: session.id } }).catch(() => undefined)
     return null
+  }
+
+  // Reissue deposit addresses when the deployment moves to another network.
+  // Existing sessions would otherwise keep a testnet address indefinitely.
+  if (session.user.platformWallet?.network !== getBchNetwork()) {
+    try {
+      session.user.platformWallet = await ensurePlatformWallet(session.user.id)
+    } catch {
+      // Leave the existing wallet in place when the new key is not configured.
+    }
   }
 
   return session

@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { binToHex, decodeCashAddress, encodeLockingBytecodeP2pkh, sha256 } from '@bitauth/libauth'
+import { getBchNetwork } from './network'
 
 export type ElectrumHistoryItem = {
   tx_hash: string
@@ -99,8 +100,13 @@ export function takeJsonMessages(buffer: string): { messages: string[]; rest: st
   }
 }
 
+const DEFAULT_ELECTRUM_URL: Record<ReturnType<typeof getBchNetwork>, string> = {
+  chipnet: 'wss://chipnet.imaginary.cash:50004',
+  mainnet: 'wss://electrum.imaginary.cash:50004',
+}
+
 export function getElectrumUrl(): string {
-  return process.env.ELECTRUM_WSS_URL ?? 'wss://chipnet.imaginary.cash:50004'
+  return process.env.ELECTRUM_WSS_URL ?? DEFAULT_ELECTRUM_URL[getBchNetwork()]
 }
 
 export function addressToScripthash(address: string): string {

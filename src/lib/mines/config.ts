@@ -30,8 +30,8 @@ export const MINES_BOMB_PENALTY_BPS = 3_500
 export const MINES_PENALTY_ROUND_TO = 10
 
 export const MINES_DEFAULT_STAKE_PUSD = 200n
-/** 2.00 PUSD minimum stake, per the match rules. */
-export const MINES_MIN_STAKE_PUSD = 200n
+/** 0.20 PUSD minimum stake. */
+export const MINES_MIN_STAKE_PUSD = 20n
 export const MINES_MAX_STAKE_PUSD = 100_000n
 
 /** 1% platform fee on the pot, in basis points. */
