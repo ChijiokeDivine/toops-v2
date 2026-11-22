@@ -53,7 +53,10 @@ export function BetPanel({
   onBet,
 }: BetPanelProps) {
   const value = Number.parseFloat(amount) || 0
-  const locked = phase !== 'betting' || !started
+  // The wheel only takes chips while a betting window is open. Taking a seat is
+  // a separate step, so the amount field unlocks as soon as the window opens.
+  const closed = phase !== 'betting'
+  const locked = closed || !started
 
   const canBet = (o: Outcome) =>
     !locked && value >= MIN_BET && value <= balance && (myPick === null || myPick === o)
@@ -83,28 +86,28 @@ export function BetPanel({
               autoComplete="off"
               value={amount}
               onChange={handleInput}
-              disabled={locked}
+              disabled={closed}
               placeholder="$0.00"
               className="w-full h-10 min-w-0 bg-transparent text-[17px] font-medium text-white outline-none placeholder:text-[#4a5361] disabled:opacity-60"
             />
             <DollarBadge className="h-[22px] w-[22px] text-[13px]" />
           </label>
           <div className="flex shrink-0 items-stretch divide-x divide-[#0b0f14] bg-[#151b22]">
-            <button type="button" className={segment} disabled={locked} onClick={() => onAmountChange('')}>
+            <button type="button" className={segment} disabled={closed} onClick={() => onAmountChange('')}>
               Clear
             </button>
-            <button type="button" className={segment} disabled={locked} onClick={() => onAmountChange(toField(value / 2))}>
+            <button type="button" className={segment} disabled={closed} onClick={() => onAmountChange(toField(value / 2))}>
               ½
             </button>
             <button
               type="button"
               className={segment}
-              disabled={locked}
+              disabled={closed}
               onClick={() => onAmountChange(toField(Math.min(value * 2, balance)))}
             >
               2×
             </button>
-            <button type="button" className={segment} disabled={locked} onClick={() => onAmountChange(toField(balance))}>
+            <button type="button" className={segment} disabled={closed} onClick={() => onAmountChange(toField(balance))}>
               Max
             </button>
           </div>
@@ -113,8 +116,8 @@ export function BetPanel({
         <button
           type="button"
           onClick={onStart}
-          disabled={started}
-          className="flex h-11 w-full shrink-0 items-center justify-center gap-2.5 rounded-lg bg-[#1fd36b] px-5 text-[14px] font-bold text-[#06210f] transition-colors hover:bg-[#25e377] disabled:cursor-default disabled:bg-[#151b22] disabled:text-[#7b8594] sm:w-auto"
+          disabled={started || closed}
+          className="mn-cta mn-cta-fit shrink-0 gap-2.5"
         >
           <PlayIcon className="h-4 w-4" />
           {started ? 'Playing' : 'Play'}

@@ -7,6 +7,7 @@ import { ROULETTE_BETTING_WINDOW_MS } from '@/lib/roulette/config'
 import { ROULETTE_OUTCOMES } from '@/lib/roulette/rules'
 import { BetPanel, money } from './bet-panel'
 import { OutcomeIcon, SoundOffIcon, SoundOnIcon } from './icons'
+import { RouletteDemo } from './roulette-demo'
 import { RouletteStrip } from './roulette-strip'
 import * as sfx from './sfx'
 import { MIN_BET, OUTCOME_LABEL, type Bet, type Outcome, type Phase } from './types'
@@ -211,6 +212,12 @@ export function RouletteGame() {
     )
   }
 
+  // Nothing real to reveal while the table is empty: the ambient demo wheel
+  // spins instead of a frozen strip. Real chips hand over to the live strip.
+  const liveBets = round
+    ? ROULETTE_OUTCOMES.reduce((count, outcome) => count + round.bettors[outcome].length, 0)
+    : 0
+
   const label =
     phase === 'betting'
       ? 'STARTING IN'
@@ -267,13 +274,17 @@ export function RouletteGame() {
       </div>
 
       <div className="mt-6">
-        <RouletteStrip
-          phase={phase}
-          target={winner}
-          spinId={spinId}
-          onSettled={handleSettled}
-          targetIndex={winner ? round?.slot ?? null : null}
-        />
+        {liveBets === 0 ? (
+          <RouletteDemo />
+        ) : (
+          <RouletteStrip
+            phase={phase}
+            target={winner}
+            spinId={spinId}
+            onSettled={handleSettled}
+            targetIndex={winner ? round?.slot ?? null : null}
+          />
+        )}
       </div>
 
       <div role="status" className="mx-auto mt-5 w-full max-w-[582px] px-4 text-center">
