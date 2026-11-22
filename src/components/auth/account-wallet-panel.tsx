@@ -35,6 +35,52 @@ const payoutOptions: Array<{ value: PayoutAsset; label: string; hint: string }> 
   { value: 'BCH', label: 'BCH', hint: 'Swap to BCH at payout' },
 ]
 
+function SyncIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M20.5 11a8.5 8.5 0 0 0-14.6-5.9L4 7" />
+      <path d="M4 3.5V7h3.5" />
+      <path d="M3.5 13a8.5 8.5 0 0 0 14.6 5.9L20 17" />
+      <path d="M20 20.5V17h-3.5" />
+    </svg>
+  )
+}
+
+/** One deposit destination: label and copy on top, full address underneath. */
+function DepositAddressRow({
+  title,
+  hint,
+  address,
+}: {
+  title: string
+  hint: string
+  address: string
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-medium text-white">
+          {title}
+          <span className="ml-1.5 font-normal text-[var(--t-muted)]">· {hint}</span>
+        </p>
+        <CopyButton value={address} />
+      </div>
+      <code className="mt-1.5 block break-all rounded-lg bg-[var(--t-surface-2)] px-2.5 py-2 font-mono text-[11px] leading-5 text-[var(--t-green)]">
+        {address}
+      </code>
+    </div>
+  )
+}
+
 export function AccountWalletPanel({
   balancePusd,
   platformAddress,
@@ -45,7 +91,6 @@ export function AccountWalletPanel({
   onLinkWallet,
 }: AccountWalletPanelProps) {
   const router = useRouter()
-  const depositAddress = depositTokenAddress ?? platformAddress
 
   const [tab, setTab] = useState<WalletTab>('wallet')
   const [syncing, setSyncing] = useState(false)
@@ -165,40 +210,47 @@ export function AccountWalletPanel({
       {tab === 'wallet' ? (
         <div role="tabpanel" className="mt-3 space-y-2.5">
           <div className={card}>
-            <p className={label}>Balance</p>
-            <p className="mt-1 text-3xl font-semibold text-white">
-              {balancePusd} <span className="text-sm font-medium text-[var(--t-muted)]">PUSD</span>
-            </p>
-          </div>
-
-          <div className={card}>
-            <p className={label}>Deposit address</p>
-            <div className="mt-2 flex items-center gap-2">
-              <code className="min-w-0 flex-1 break-all rounded-lg bg-[var(--t-surface-2)] px-2.5 py-2 font-mono text-xs text-[var(--t-green)]">
-                {depositAddress}
-              </code>
-              <CopyButton value={depositAddress} label="Copy" />
-            </div>
-            <p className="mt-2 text-xs text-[var(--t-muted)]">
-              Send <span className="text-white">PUSD</span> or{' '}
-              <span className="text-white">BCH</span> to this address. BCH deposits are
-              automatically swapped to PUSD.
-            </p>
-            <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className={label}>Balance</p>
               <button
                 type="button"
                 onClick={() => void handleSync()}
                 disabled={syncing}
-                className="rounded-lg border border-[var(--t-border)] px-3 py-1.5 text-sm text-white transition hover:border-[var(--t-green)] disabled:opacity-50"
+                aria-label="Sync deposits"
+                className="group relative -mr-1.5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-[var(--t-muted)] transition hover:bg-[var(--t-surface-2)] hover:text-white disabled:cursor-default disabled:opacity-60"
               >
-                {syncing ? 'Scanning…' : 'Sync deposits'}
+                <SyncIcon className={`h-[18px] w-[18px] ${syncing ? 'animate-spin' : ''}`} />
+                <span className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-10 whitespace-nowrap rounded-md border border-[var(--t-border)] bg-[var(--t-surface-2)] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
+                  Sync deposits
+                </span>
               </button>
-              {syncMessage && (
-                <p className="text-xs text-[var(--t-green)]" role="status">
-                  {syncMessage}
-                </p>
+            </div>
+            <p className="mt-1 text-3xl font-semibold text-white">
+              {balancePusd} <span className="text-sm font-medium text-[var(--t-muted)]">PUSD</span>
+            </p>
+            {syncMessage && (
+              <p className="mt-1.5 text-xs text-[var(--t-green)]" role="status">
+                {syncMessage}
+              </p>
+            )}
+          </div>
+
+          <div className={card}>
+            <p className={label}>Deposit addresses</p>
+            <div className="mt-2.5 space-y-3">
+              <DepositAddressRow title="Primary" hint="BCH" address={platformAddress} />
+              {depositTokenAddress && (
+                <DepositAddressRow
+                  title="Token-aware"
+                  hint="PUSD"
+                  address={depositTokenAddress}
+                />
               )}
             </div>
+            <p className="mt-3 text-xs leading-5 text-[var(--t-muted)]">
+              Same account, two encodings. Send BCH to either; use the token-aware address for PUSD.
+              BCH deposits are swapped to PUSD automatically.
+            </p>
           </div>
         </div>
       ) : (
